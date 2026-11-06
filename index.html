@@ -1,0 +1,1801 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Study Buddy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A study notebook you can talk to.">
+
+
+
+<style>
+/* Layout: an open spiral notebook on a desk mat. Spread 1 = plan | instant planner. Spread 2 = progress pie | reminders. Spread 3 = two tutor pages. Pencil is the cursor. */
+:root {
+  --desk: #244B49; --desk2: #1A3A38; --on-desk: #F4F6F1; --cover: #1F2A44; --cover2: #141C31;
+  --paper: #FAFAF4; --paper2: #E9E8DC; --rule: #C4D6EA; --margin: #E5484D;
+  --fg: #1A2238; --muted: #5A6480; --pen: #23408F; --graphite: #3A3F4B;
+  --hl: #FFD93D; --on-hl: #1A2238; --hl-soft: #FFE066;
+  --ok: #2E9E6B; --warn: #E8833A; --coil: #9AA3B2;
+  --note: #FFF3A3; --note-ink: #2B2A1E; --alarm: #FFD3CF;
+  --hand: 'Caveat', 'Comic Sans MS', cursive;
+  --marker: 'Permanent Marker', 'Marker Felt', 'Comic Sans MS', cursive;
+  --body: 'Hind', 'Segoe UI', Arial, sans-serif;
+  --mono: ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --desk: #0B1414; --desk2: #071010; --on-desk: #E8ECF6; --cover: #0F1526; --cover2: #090D18;
+    --paper: #1D2433; --paper2: #151B27; --rule: #2B3850; --margin: #FF6B70;
+    --fg: #E8ECF6; --muted: #9BA8C4; --pen: #8FB0FF; --graphite: #C9D0DE;
+    --hl-soft: #6B5A12; --ok: #4BD19A; --warn: #F0985A; --coil: #7C8798;
+    --note: #4A4116; --note-ink: #FFF0A0; --alarm: #5A2326; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --desk: #0B1414; --desk2: #071010; --on-desk: #E8ECF6; --cover: #0F1526; --cover2: #090D18;
+  --paper: #1D2433; --paper2: #151B27; --rule: #2B3850; --margin: #FF6B70;
+  --fg: #E8ECF6; --muted: #9BA8C4; --pen: #8FB0FF; --graphite: #C9D0DE;
+  --hl-soft: #6B5A12; --ok: #4BD19A; --warn: #F0985A; --coil: #7C8798;
+  --note: #4A4116; --note-ink: #FFF0A0; --alarm: #5A2326; color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; color: var(--fg); font: 400 1rem/1.5 var(--body); overflow-x: clip;
+  background-color: var(--desk);
+  background-image: radial-gradient(ellipse at 50% 35%, transparent 40%, var(--desk2) 100%),
+    repeating-linear-gradient(45deg, transparent 0 3px, rgba(0,0,0,.04) 3px 4px);
+  min-height: 100vh;
+}
+h1, h2, h3, p, ul, ol { margin: 0; padding: 0; }
+ul, ol { list-style: none; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--hl); outline-offset: 2px; box-shadow: 0 0 0 5px var(--fg); }
+.wrap { max-width: 1240px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Desk bar */
+.bar { padding-block: 16px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { font: 400 clamp(1.5rem, 4vw, 2.1rem)/1 var(--marker); background: var(--hl); color: var(--on-hl); padding: 8px 16px 6px; transform: rotate(-1.5deg); box-shadow: 3px 3px 0 rgba(0,0,0,.35); }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 8px 14px; border: 1.5px solid var(--on-desk); background: transparent; color: var(--on-desk); font-weight: 600; font-size: .9rem; }
+.chip[aria-pressed="true"] { background: var(--on-desk); color: var(--desk2); }
+.chip:hover { background: var(--hl); color: var(--on-hl); border-color: var(--hl); }
+
+/* Plain-language backend diagnostics, shown only when setup needs attention. */
+.sb-connection{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:var(--note);color:var(--note-ink);border:2px solid var(--graphite);padding:12px 16px;margin-block:6px 8px;border-radius:7px;line-height:1.4;box-shadow:3px 3px 0 rgba(0,0,0,.15)}
+.sb-connection[hidden]{display:none!important}
+.sb-connection strong{font-weight:700}
+.sb-connection p{margin:4px 0 0;overflow-wrap:anywhere}
+.sb-connection button{flex:none;border:1px solid currentColor;background:transparent;color:inherit;min-width:34px;min-height:34px;cursor:pointer}
+
+/* Optional AI tutor model selector lives in the notebook toolbar. */
+.sb-model-label{border:1.5px solid var(--on-desk);color:var(--on-desk);min-height:42px;padding:5px 9px;display:flex;gap:8px;align-items:center;font-size:.85rem;font-weight:600}
+.sb-model-label select{max-width:min(260px,46vw);background:var(--desk2);color:var(--on-desk);padding:4px;min-height:30px;border:1px solid var(--on-desk);border-radius:3px}
+.sb-model-label select:focus-visible{outline:3px solid var(--hl)}
+/* Notebook shell */
+.stage { padding-block: 6px 40px; padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.cover { position: relative; padding: 16px; background: var(--cover); border-radius: 18px; box-shadow: 0 30px 50px -18px rgba(0,0,0,.6), inset 0 0 0 2px var(--cover2); }
+.book { position: relative; height: clamp(580px, calc(100vh - 200px), 780px); perspective: 2600px; }
+.half, .leaf { position: absolute; top: 0; height: 100%; width: 50%; }
+.half.l { left: 0; } .half.r { left: 50%; }
+.leaf { left: 50%; transform-origin: left center; transform-style: preserve-3d; transition: transform .95s cubic-bezier(.65, .02, .3, 1); }
+.leaf.flipped { transform: rotateY(-180deg); }
+.face { position: absolute; inset: 0; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.face.back { transform: rotateY(180deg); }
+.face::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .9s; z-index: 5; }
+.face.front::after { background: linear-gradient(to left, rgba(0,0,0,.3), transparent 65%); }
+.face.back::after { background: linear-gradient(to right, rgba(0,0,0,.3), transparent 65%); }
+.leaf.turning .face::after { opacity: 1; }
+.coils { position: absolute; left: 50%; top: 6px; bottom: 6px; width: 50px; transform: translateX(-50%); z-index: 100; pointer-events: none;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='30'><rect x='2' y='11' width='46' height='9' rx='4.5' fill='%23555d6e'/><rect x='5' y='12' width='40' height='3' rx='1.5' fill='%23c6ccd8'/></svg>") repeat-y center top; }
+.tabs { position: absolute; right: -30px; top: 70px; display: grid; gap: 10px; z-index: 6; }
+.tab { writing-mode: vertical-rl; border: 0; padding: 14px 8px; font: 400 .95rem/1 var(--marker); color: var(--on-hl); border-radius: 0 10px 10px 0; box-shadow: 2px 2px 0 rgba(0,0,0,.35); min-height: 44px; }
+.tab:nth-child(1) { background: #FFD93D; } .tab:nth-child(2) { background: #8EDCB6; } .tab:nth-child(3) { background: #F3A0A6; }
+.tab[aria-current="true"] { transform: translateX(8px); }
+.turnbar { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 18px; color: var(--on-desk); flex-wrap: wrap; }
+.tb { min-height: 44px; padding: 8px 18px; border: 1.5px solid var(--on-desk); background: transparent; color: var(--on-desk); font-weight: 600; }
+.tb:hover:not(:disabled) { background: var(--hl); color: var(--on-hl); border-color: var(--hl); }
+.tb:disabled { opacity: .4; cursor: default; }
+#where { font: 500 1.25rem/1 var(--hand); min-width: 9ch; text-align: center; }
+
+/* Pages */
+.page { position: absolute; inset: 0; display: flex; flex-direction: column; background-color: var(--paper); color: var(--fg); padding: 18px 22px 14px 58px; min-width: 0; }
+.page.left { padding-right: 36px; border-radius: 6px 0 0 6px; box-shadow: inset -26px 0 24px -22px rgba(0,0,0,.35); }
+.page.right { padding-left: 62px; border-radius: 0 6px 6px 0; box-shadow: inset 26px 0 24px -22px rgba(0,0,0,.35); }
+.page.left { padding-left: 58px; }
+.page::before { content: ""; position: absolute; top: 0; bottom: 0; left: 44px; width: 1.5px; background: var(--margin); opacity: .55; pointer-events: none; }
+.page.right::before { left: 46px; }
+.ph { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.pt { font: 400 1.5rem/1.1 var(--marker); background: linear-gradient(transparent 60%, var(--hl-soft) 60% 92%, transparent 92%); padding: 0 .2em; margin-right: auto; }
+.pno { font: 700 1.1rem/1 var(--hand); color: var(--muted); }
+.turn-btn { border: 1.5px dashed var(--graphite); background: transparent; padding: 6px 12px; font: 500 1.15rem/1 var(--hand); min-height: 36px; }
+.turn-btn:hover { background: var(--hl); color: var(--on-hl); border-style: solid; }
+.pb { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 6px 10px 0; }
+.pb.fill { display: flex; flex-direction: column; overflow: hidden; }
+.pb.dots { background-image: radial-gradient(var(--rule) 1.2px, transparent 1.6px); background-size: 24px 24px; background-attachment: local; }
+.pb.ruled { background-image: linear-gradient(var(--rule) 1px, transparent 1px); background-size: 100% 32px; background-attachment: local; }
+.pf { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 8px; color: var(--muted); font-size: .88rem; min-height: 34px; }
+.linkish { background: none; border: 0; padding: 6px 2px; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; min-height: 34px; }
+.confirm { display: inline-flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.hint { color: var(--muted); font-size: .92rem; }
+
+/* Plan page */
+.plan-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.plan-title { font: 700 1.9rem/1.1 var(--hand); color: var(--pen); }
+.stamp { font: 400 .8rem/1 var(--marker); color: var(--margin); border: 2px solid var(--margin); padding: 4px 8px; transform: rotate(-4deg); }
+.mini { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; font-size: .92rem; color: var(--muted); }
+.mini .track { flex: 1; height: 10px; border: 1.5px solid var(--graphite); background: var(--paper); }
+.mini .fill { height: 100%; width: 0; background: var(--ok); transition: width .5s; }
+.day { margin-bottom: 14px; }
+.day-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; border-bottom: 2px solid var(--graphite); padding-bottom: 2px; }
+.day-head h3 { font: 700 1.5rem/1.1 var(--hand); }
+.dmeta { color: var(--muted); font-size: .85rem; margin-left: auto; }
+.task { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; border-bottom: 1px dashed var(--rule); position: relative; }
+.box { flex: none; width: 30px; height: 30px; padding: 0; border: 0; background: none; margin-top: 2px; }
+.box svg { width: 30px; height: 30px; display: block; overflow: visible; }
+.box .sq { fill: none; stroke: var(--graphite); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.box .tick { fill: none; stroke: var(--pen); stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 44; stroke-dashoffset: 44; transition: stroke-dashoffset .35s ease-out; }
+.task.done .box .tick { stroke-dashoffset: 0; }
+.tmain { flex: 1; min-width: 0; display: grid; }
+.subj { font: 700 1.25rem/1.2 var(--hand); }
+.what { font: 500 1.15rem/1.25 var(--hand); color: var(--muted); overflow-wrap: anywhere; }
+.mins { flex: none; font: 700 1.2rem/1.2 var(--hand); color: var(--muted); white-space: nowrap; }
+.rm { flex: none; border: 0; background: none; color: var(--muted); font-size: 1.3rem; line-height: 1; padding: 4px 8px; min-height: 36px; opacity: .35; }
+.task:hover .rm, .rm:focus-visible { opacity: 1; }
+@media (hover: none) { .rm { opacity: .8; } }
+.task.done .subj, .task.done .what { text-decoration: line-through; text-decoration-color: var(--graphite); text-decoration-thickness: 2px; color: var(--muted); }
+[contenteditable="true"] { cursor: text; outline: none; border-radius: 3px; }
+[contenteditable="true"]:hover { background: color-mix(in srgb, var(--hl-soft) 45%, transparent); }
+[contenteditable="true"]:focus { background: var(--hl-soft); }
+.add { margin-top: 6px; border: 1.5px dashed var(--graphite); background: transparent; padding: 4px 12px; font: 500 1.15rem/1.2 var(--hand); min-height: 36px; }
+.add:hover { background: var(--hl); color: var(--on-hl); border-style: solid; }
+.tips { font: 700 1.3rem/1.25 var(--hand); color: var(--muted); margin-top: 8px; }
+
+/* Progress page */
+.pie-wrap { display: grid; place-items: center; padding-top: 4px; }
+.pie { width: min(300px, 70%); height: auto; overflow: visible; }
+.pie text { font: 400 40px var(--marker); fill: var(--fg); text-anchor: middle; }
+.pie .sub { font: 500 17px var(--hand); fill: var(--muted); }
+.legend { display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; margin: 8px 0 14px; font: 700 1.3rem/1 var(--hand); }
+.legend i { display: inline-block; width: 18px; height: 18px; vertical-align: -3px; margin-right: 6px; border: 2px solid var(--graphite); }
+.legend .d { background: var(--ok); }
+.legend .l { background: repeating-linear-gradient(45deg, var(--graphite) 0 2px, transparent 2px 6px); }
+.subjects { display: grid; gap: 6px; }
+.srow { display: grid; grid-template-columns: minmax(70px, 1fr) 2fr auto; gap: 10px; align-items: center; }
+.srow b { font: 700 1.2rem/1.1 var(--hand); overflow-wrap: anywhere; }
+.sbar { height: 12px; border: 1.5px solid var(--graphite); background: var(--paper); }
+.sbar span { display: block; height: 100%; background: var(--ok); }
+.srow em { font: 700 1.1rem/1 var(--hand); font-style: normal; color: var(--muted); }
+
+/* Reminders */
+.remform { display: grid; gap: 8px; margin: 4px 0 12px; background: var(--paper); border: 1.5px solid var(--graphite); padding: 10px; }
+.remform input { min-height: 42px; padding: 8px 10px; border: 1.5px solid var(--graphite); background: var(--paper); min-width: 0; width: 100%; }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.quick button { border: 1.5px dashed var(--graphite); background: transparent; padding: 4px 10px; font: 500 1.1rem/1.2 var(--hand); min-height: 34px; }
+.quick button:hover { background: var(--hl); color: var(--on-hl); border-style: solid; }
+.btn { min-height: 42px; padding: 8px 18px; border: 1.5px solid var(--fg); background: var(--hl); color: var(--on-hl); font-weight: 600; }
+.btn:hover { background: var(--fg); color: var(--paper); }
+.rem { background: var(--note); color: var(--note-ink); padding: 10px 12px; margin-bottom: 10px; box-shadow: 2px 3px 0 rgba(0,0,0,.2); display: grid; gap: 4px; position: relative; }
+.rem:nth-child(odd) { transform: rotate(-.6deg); } .rem:nth-child(even) { transform: rotate(.5deg); }
+.rem.ring { outline: 3px solid var(--margin); }
+.rem .rt { font: 700 1.3rem/1.2 var(--hand); overflow-wrap: anywhere; }
+.rem .when { font-size: .9rem; opacity: .85; }
+.rem .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.rem .acts button { border: 1.5px solid currentColor; background: transparent; padding: 4px 10px; font-weight: 600; font-size: .85rem; min-height: 34px; }
+.rem .acts button:hover { background: var(--note-ink); color: var(--note); }
+.empty { color: var(--muted); font: 500 1.25rem/1.3 var(--hand); padding: 8px 0; }
+.alarm { position: fixed; top: max(10px, env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 32px)); z-index: 200; display: grid; gap: 8px; }
+.alarm .rem { background: var(--alarm); color: var(--fg); transform: none; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+.alarm .rem .acts button:hover { background: var(--fg); color: var(--alarm); }
+
+/* Chats */
+.chat { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 6px 4px 8px 0; }
+.msg { max-width: 94%; overflow-wrap: anywhere; min-width: 0; }
+.msg.me { align-self: flex-end; font: 700 1.35rem/1.25 var(--hand); color: var(--pen); text-align: right; white-space: pre-wrap; }
+.msg.me img { display: block; margin: 0 0 4px auto; max-width: 160px; max-height: 120px; border: 2px solid var(--graphite); }
+.msg.sys { align-self: center; border: 1.5px dashed var(--graphite); padding: 6px 12px; color: var(--muted); font-size: .92rem; background: var(--paper); text-align: center; }
+.buddy .msg.bot { align-self: flex-start; background: var(--note); color: var(--note-ink); padding: 10px 14px; box-shadow: 2px 3px 0 rgba(0,0,0,.2); position: relative; white-space: pre-wrap; }
+.buddy .msg.bot::before { content: ""; position: absolute; top: -8px; left: 50%; width: 46px; height: 14px; transform: translateX(-50%) rotate(-2deg); background: color-mix(in srgb, var(--hl) 60%, transparent); }
+.solver .msg.bot { align-self: stretch; max-width: 100%; background: var(--paper); border: 1.5px solid var(--graphite); border-left: 5px solid var(--pen); padding: 10px 14px; box-shadow: 3px 3px 0 var(--rule); }
+.msg.bot p { margin: 0 0 8px; white-space: pre-wrap; } .msg.bot p:last-child { margin-bottom: 0; }
+.msg.bot .md-h { font-weight: 600; }
+.msg.bot ul, .msg.bot ol { margin: 0 0 8px 20px; } .msg.bot ul { list-style: disc; } .msg.bot ol { list-style: decimal; }
+.msg.bot code { font: 500 .88em var(--mono); background: color-mix(in srgb, var(--rule) 55%, transparent); padding: 1px 4px; }
+.codeblock { margin: 6px 0 10px; border: 1.5px solid var(--graphite); background: var(--paper2); }
+.cb-bar { display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; border-bottom: 1px solid var(--graphite); font: 600 .75rem/1 var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.cb-copy { border: 0; background: none; font-weight: 600; text-decoration: underline; min-height: 28px; padding: 2px 4px; }
+.codeblock pre { margin: 0; padding: 8px 10px; overflow-x: auto; }
+.codeblock pre code { background: none; padding: 0; font-size: .85rem; white-space: pre; }
+.thinking::after { content: "Thinking"; animation: dots 1.2s steps(4, end) infinite; }
+@keyframes dots { 0% { content: "Thinking"; } 25% { content: "Thinking."; } 50% { content: "Thinking.."; } 75%, 100% { content: "Thinking..."; } }
+.starters { display: flex; flex-wrap: wrap; gap: 6px; }
+.starters button { border: 1.5px dashed var(--graphite); background: var(--paper); padding: 4px 10px; font: 500 1.1rem/1.2 var(--hand); min-height: 34px; text-align: left; }
+.starters button:hover { background: var(--hl); color: var(--on-hl); border-style: solid; }
+.tray { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
+.tray img { max-height: 54px; border: 2px solid var(--graphite); }
+.composer { display: flex; gap: 6px; align-items: flex-end; background: var(--paper); border: 1.5px solid var(--fg); padding: 6px; }
+.composer textarea { flex: 1; min-width: 0; resize: none; border: 0; background: transparent; padding: 8px; min-height: 42px; max-height: 120px; outline: none; font-size: 1rem; }
+.composer textarea::placeholder { color: var(--muted); }
+.ib { flex: none; width: 42px; height: 42px; display: grid; place-items: center; border: 1.5px solid var(--fg); background: var(--paper); padding: 0; position: relative; }
+.ib:hover { background: var(--hl); color: var(--on-hl); }
+.ib[aria-pressed="true"] { background: var(--margin); color: #fff; }
+.ib[aria-pressed="true"]::after { content: ""; position: absolute; inset: -5px; border: 2px solid var(--margin); animation: ring 1.2s ease-out infinite; }
+@keyframes ring { from { transform: scale(.85); opacity: 1; } to { transform: scale(1.25); opacity: 0; } }
+.go { flex: none; min-height: 42px; padding: 0 16px; border: 1.5px solid var(--fg); background: var(--hl); color: var(--on-hl); font-weight: 600; }
+.go:hover:not(:disabled) { background: var(--fg); color: var(--paper); }
+.go:disabled { opacity: .5; cursor: default; }
+.opts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 26px; font-size: .88rem; color: var(--muted); }
+.opts label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.opts input { width: 18px; height: 18px; accent-color: var(--fg); }
+.status { flex: 1; min-width: 0; }
+
+/* Pencil cursor */
+.pencil { position: fixed; left: 0; top: 0; width: 64px; height: 64px; pointer-events: none; z-index: 300; opacity: 0; transition: opacity .15s; will-change: transform; }
+.pencil.show { opacity: 1; }
+.pencil svg { width: 64px; height: 64px; display: block; transform-origin: 6px 58px; transition: transform .1s; }
+.pencil.press svg { transform: translate(1px, 1px) rotate(-7deg) scale(.96); }
+.cover.pen, .cover.pen * { cursor: none; }
+.cover.pen [contenteditable="true"], .cover.pen textarea, .cover.pen input[type="text"], .cover.pen input[type="datetime-local"] { cursor: text; }
+
+/* Single page layout on narrow screens */
+@media (max-width: 860px) {
+  .stage { padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .cover { padding: 10px; border-radius: 14px; }
+  .book { height: auto; perspective: 1800px; }
+  .coils, .tabs, .turn-btn { display: none; }
+  .page { position: relative; inset: auto; display: none; height: clamp(560px, 80vh, 780px); padding: 16px 14px 12px 46px; border-radius: 6px; box-shadow: none; }
+  .page.active { display: flex; }
+  .page::before, .page.right::before { left: 34px; }
+  .page.left, .page.right { padding-left: 46px; padding-right: 14px; }
+  .book.narrow .page.in-fwd { animation: infwd .5s ease-out; transform-origin: left center; }
+  .book.narrow .page.in-back { animation: inback .5s ease-out; transform-origin: right center; }
+  @keyframes infwd { from { transform: rotateY(-70deg); opacity: .2; } to { transform: none; opacity: 1; } }
+  @keyframes inback { from { transform: rotateY(70deg); opacity: .2; } to { transform: none; opacity: 1; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .leaf { transition: none; } .face::after { transition: none; }
+  .thinking::after { animation: none; content: "Thinking..."; }
+  .ib[aria-pressed="true"]::after { animation: none; }
+  .box .tick, .mini .fill { transition: none; }
+  .book.narrow .page.in-fwd, .book.narrow .page.in-back { animation: none; }
+}
+.who{font-size:.9rem;color:var(--on-desk);max-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vcs{font-size:.85rem;color:var(--on-desk);max-width:16ch;line-height:1.2}
+.chip[aria-pressed=true]#voiceCmd{outline:2px solid var(--hl,#f5c518)}
+@media (max-width:600px){.starters{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}.starters button{flex:none;white-space:nowrap}.ib{width:38px;height:38px}.composer{gap:4px;padding:4px}.tools{gap:6px}.chip{padding:6px 9px;gap:6px;font-size:.82rem;min-height:40px}.who,.vcs{display:none}.chip svg{width:16px;height:16px}}
+</style>
+<style>
+.math-d { overflow-x: auto; overflow-y: hidden; padding: 2px 0; max-width: 100%; }
+.mathblock { margin: 6px 0 10px; overflow-x: auto; }
+.tablewrap { overflow-x: auto; margin: .4em 0; }
+.tablewrap table { border-collapse: collapse; font-size: .95em; }
+.tablewrap th, .tablewrap td { border: 1px solid var(--rule); padding: 3px 9px; text-align: left; }
+.tablewrap th { background: var(--paper2); }
+.mathblock .katex-display { margin: .2em 0; }
+.math-raw { font-family: var(--mono); font-size: .88em; white-space: pre-wrap; }
+.msg.bot .katex { font-size: 1.08em; }
+.mbadge { font: 600 .74rem var(--body); letter-spacing: .02em; color: var(--muted); text-transform: none; margin: 0 0 6px; }
+.mbadge:empty { display: none; }
+.mchecks { margin-top: 8px; display: grid; gap: 4px; }
+.mchecks:empty { display: none; }
+.chk { font: 500 .84rem/1.3 var(--mono); padding: 3px 8px; border-left: 4px solid var(--graphite); background: color-mix(in srgb, var(--rule) 35%, transparent); overflow-wrap: anywhere; }
+.chk.good { border-left-color: var(--ok); }
+.chk.fail, .chk.bad { border-left-color: var(--margin); }
+.chk.run { opacity: .8; }
+.mnotes p { font-size: .82rem; color: var(--muted); margin: 6px 0 0; white-space: normal; }
+.rhint { font-size: .82rem; color: var(--muted); margin-top: 2px; line-height: 1.3; }
+.usage { font-size: .8rem; color: var(--muted); margin-left: auto; }
+</style>
+
+<style>
+/* Study Flow: themed utility overlays that leave the spiral notebook untouched */
+.sb-overlay[hidden]{display:none!important}.sb-overlay{position:fixed;z-index:450;inset:0;background:rgba(5,15,24,.68);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.sb-dialog{width:min(760px,100%);max-height:min(90vh,850px);overflow-y:auto;background:var(--paper);color:var(--fg);border:5px solid var(--cover);box-shadow:12px 15px 0 rgba(0,0,0,.22);padding:24px;position:relative}
+.sb-dialog-small{width:min(570px,100%)}.sb-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:12px}.sb-dialog-head h2{font:700 clamp(1.6rem,4vw,2.3rem)/1.1 var(--hand);color:var(--pen)}
+.sb-close{font-size:1.75rem;border:2px solid var(--fg);min-width:42px;min-height:42px;background:var(--paper);line-height:1}.sb-exam-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 20px;padding:15px;border:2px dashed var(--rule)}.sb-exam-form label{display:grid;gap:4px;font-weight:600}.sb-exam-form input,.sb-exam-form textarea,.sb-inline-label select,.sb-time-settings input{width:100%;min-height:40px;border:1.5px solid var(--graphite);padding:7px;background:var(--paper);color:var(--fg)}.sb-full{grid-column:1/-1}
+.sb-rec{background:var(--note);color:var(--note-ink);border-left:5px solid var(--pen);padding:14px;display:grid;gap:9px;margin-bottom:18px}.sb-rec h3{font:700 1.6rem/1.1 var(--hand)}.sb-exam{border-top:2px dashed var(--rule);margin-top:12px;padding-top:14px}.sb-exam h3{font:700 1.6rem/1.1 var(--hand)}.sb-topic{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--rule)}.sb-topic select{border:1px solid var(--graphite);background:var(--paper);color:var(--fg);min-height:36px}.sb-actions{display:flex;flex-wrap:wrap;gap:8px}.sb-mini-btn{padding:5px 10px;border:1px solid currentColor;min-height:36px;background:transparent;color:inherit;font-weight:600}.sb-mini-btn:hover{background:var(--hl);color:var(--on-hl)}
+.sb-plan-actions{align-items:end;margin:14px 0}.sb-hours-label{display:grid;gap:5px;font-size:.9rem;font-weight:600}.sb-hours-label input{width:150px;min-height:42px;border:1.5px solid var(--graphite);padding:7px;background:var(--paper);color:var(--fg)}.sb-ai-advanced{margin:12px 0;padding:10px;border:1px dashed var(--rule)}.sb-ai-advanced summary{cursor:pointer;font-weight:600}.sb-inline-label{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0}.sb-inline-label input[type=checkbox]{width:20px;height:20px}.sb-time-settings input{width:auto}.sb-notice{padding:10px;border-bottom:1px solid var(--rule);display:grid;gap:7px}.sb-notice.overdue{border-left:4px solid var(--margin)}.sb-count{font-size:.75rem;vertical-align:top}.sb-status{color:var(--muted);font-size:.9rem}.sb-empty{padding:16px 0;color:var(--muted)}
+@media(max-width:650px){.sb-dialog{padding:14px}.sb-exam-form{grid-template-columns:1fr}.sb-overlay{padding:8px}.bar .tools{gap:5px}.bar .tools .chip{padding:7px 9px;font-size:.8rem}}
+</style>
+
+<style>.sb-chat-feedback{display:grid;gap:7px;border-top:1px dashed var(--graphite);margin-top:14px;padding-top:9px;font:500 .82rem/1.3 var(--body)}.sb-chat-feedback select{width:100%;min-height:36px;background:var(--paper);color:var(--fg);border:1px solid var(--graphite);padding:6px}.sb-chat-feedback .sb-mini-btn{font-size:.8rem;padding:4px 6px;min-height:32px}</style>
+
+
+<style>
+.sb-browser-ai{display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:8px 12px;border:1px dashed var(--graphite);border-radius:10px;margin:10px auto 6px;background:var(--paper);font:500 12px/1.4 var(--body);color:var(--fg)}
+.planner-page-toolbar{flex:none;display:grid;gap:8px;padding:0 0 8px;border-bottom:1px dashed var(--graphite)}
+.planner-page-actions{display:flex;gap:6px;flex-wrap:wrap}
+.planner-page-actions .btn{min-height:34px;padding:5px 9px;font-size:.82rem}
+.planner-page-tasks{flex:1;min-height:0;overflow-y:auto;padding:8px 2px 12px 0}
+.planner-page-summary{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 10px;font-weight:700}
+.planner-day-card{padding:8px 0 10px;border-bottom:2px dashed var(--rule)}
+.planner-day-title{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px;font:700 1.35rem/1.1 var(--hand)}
+.planner-day-total{font:600 .78rem/1.2 var(--body);color:var(--muted)}
+.planner-task-row{display:flex;align-items:flex-start;gap:8px;padding:7px 2px;border-bottom:1px dashed var(--rule);cursor:pointer}
+.planner-task-row input{flex:none;width:19px;height:19px;margin:3px 0 0;accent-color:var(--ok)}
+.planner-task-copy{display:grid;gap:1px;min-width:0;flex:1}
+.planner-task-subject{font-weight:700;overflow-wrap:anywhere}
+.planner-task-detail{font-size:.9rem;overflow-wrap:anywhere}
+.planner-task-mins{flex:none;font-size:.78rem;color:var(--muted);white-space:nowrap}
+.planner-task-row.done .planner-task-copy{text-decoration:line-through;color:var(--muted)}
+.planner-empty{padding:18px 10px;text-align:center;color:var(--muted)}
+.sb-browser-ai #browserAiStatus{flex:1 1 200px;min-width:180px}.sb-browser-ai #browserAiStatus[data-state="error"]{color:#b93833}.sb-browser-ai #browserAiStatus[data-state="ready"]{color:#207646}.sb-browser-ai .sb-ai-privacy{flex:1 1 100%;opacity:.8;font-size:11px}
+</style>
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<script src="vendor/katex/katex.min.js" defer></script>
+</head><body>
+<header class="bar wrap">
+  <div class="brand">Study Buddy</div>
+  <div class="tools">
+    <label class="sb-model-label" for="freeModelSelect">Tutor model <select id="freeModelSelect" aria-label="Select optional AI tutor model"><option value="">Choose model</option></select></label>
+    <button class="chip" id="studyOpen" type="button" aria-haspopup="dialog">⚡ Instant planner</button>
+    <button class="chip" id="notifyOpen" type="button" aria-haspopup="dialog" aria-label="Open reminders and notifications">🔔 <span id="notifyCount">0</span></button>
+    <button class="chip" id="voiceToggle" type="button" aria-pressed="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      <span id="voiceLabel">Voice on</span>
+    </button>
+    <button class="chip" id="voiceCmd" type="button" aria-pressed="false" aria-label="Voice command: press and speak"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Voice command</button>
+    <span class="vcs" id="vcStatus" role="status"></span>
+    <button class="chip" id="langBtn" type="button" aria-label="Microphone language: English (India). Press to switch.">Mic: English</button>
+    <button class="chip" id="theme" type="button" aria-label="Switch between light and dark theme">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
+      Theme
+    </button>
+    <span class="who" id="who" hidden></span>
+    <button class="chip" id="logout" type="button" hidden>Log out</button>
+  </div>
+</header>
+
+<div class="sb-browser-ai wrap" id="browserAiPanel" role="group" aria-label="Optional on-device AI tutor">
+  <button type="button" id="browserAiLoad" class="chip">Load AI tutor</button>
+  <span id="browserAiStatus" role="status" aria-live="polite">Optional AI tutor is not loaded.</span>
+  <span class="sb-ai-privacy">Optional AI tutoring is available for Problem Solver and Code &amp; Concepts. A first-time model download can be large and requires a compatible browser and device.</span>
+</div>
+<div id="connectionNotice" class="sb-connection wrap" role="status" aria-live="polite" hidden>
+  <div><strong id="connectionTitle">AI connection status</strong><p id="connectionText"></p></div>
+  <button type="button" id="connectionDismiss" aria-label="Dismiss connection message">×</button>
+</div>
+
+<main class="stage wrap">
+  <div class="cover" id="cover">
+    <div class="book" id="book"></div>
+    <div class="coils" aria-hidden="true"></div>
+    <nav class="tabs" id="tabs" aria-label="Notebook sections">
+      <button class="tab" type="button" data-go="0">Plan</button>
+      <button class="tab" type="button" data-go="1">Progress</button>
+      <button class="tab" type="button" data-go="2">Solvers</button>
+    </nav>
+  </div>
+  <div class="turnbar">
+    <button class="tb" id="prev" type="button">&#9664; Back</button>
+    <span id="where" aria-live="polite"></span>
+    <button class="tb" id="next" type="button">Turn page &#9654;</button>
+  </div>
+</main>
+
+<div class="alarm" id="alarm" role="alert" hidden></div>
+<div class="sb-overlay" id="studyOverlay" hidden>
+  <section class="sb-dialog" role="dialog" aria-modal="true" aria-labelledby="studyHeading" tabindex="-1">
+    <div class="sb-dialog-head"><h2 id="studyHeading">⚡ Instant study planner</h2><button type="button" class="sb-close" data-close="studyOverlay" aria-label="Close study dashboard">×</button></div>
+    <p class="hint">Build a study schedule in a moment. Add each upcoming exam below; topics are optional.</p>
+    <form id="examForm" class="sb-exam-form">
+      <label>Subject <input id="examSubject" required maxlength="60" placeholder="Engineering Physics"></label>
+      <label>Exam date <input id="examDate" type="date" required></label>
+      <label class="sb-full">Topics (optional; one per line or separated by commas) <textarea id="examTopics" rows="3" maxlength="2400" placeholder="Schrödinger equation, Quantum tunnelling, Wave packets"></textarea><span class="sb-status">Leave blank to use generic review and practice tasks.</span></label>
+      <button type="submit" class="btn">Add exam & topics</button>
+    </form>
+    <div class="sb-actions sb-plan-actions"><label class="sb-hours-label">Study time per day <input id="dailyStudyHours" aria-label="Daily study hours" type="number" min="0.5" max="10" step="0.5" value="2"></label><button type="button" class="btn" id="freePlanBtn">⚡ Generate instant plan</button></div>
+    <p class="hint">The planner prioritises upcoming exams and weaker topics while respecting your daily time limit.</p>
+    <p id="planGenerationStatus" class="sb-status" role="status" aria-live="polite"></p>
+    <div id="studySummary" aria-live="polite"></div>
+    <div id="studyExams"></div>
+  </section>
+</div>
+<div class="sb-overlay" id="notifyOverlay" hidden>
+  <section class="sb-dialog sb-dialog-small" role="dialog" aria-modal="true" aria-labelledby="notifyHeading" tabindex="-1">
+    <div class="sb-dialog-head"><h2 id="notifyHeading">🔔 Notification centre</h2><button type="button" class="sb-close" data-close="notifyOverlay" aria-label="Close notifications">×</button></div>
+    <p class="hint" id="notifyHelp">Reminders notify you while Study Buddy is open. For alerts after closing it, add them to your calendar.</p>
+    <button type="button" class="btn" id="notifyEnable">Enable browser notifications</button>
+    <label class="sb-inline-label"><input type="checkbox" id="notifySound"> Play a gentle sound for new reminders</label>
+    <div class="sb-inline-label sb-time-settings"><label>Quiet from <input id="quietStart" type="time"></label><label>Until <input id="quietEnd" type="time"></label></div>
+    <div id="notifyList" aria-live="polite"></div>
+    <button type="button" id="notifyGoRem" class="btn">Open reminder planner</button>
+  </section>
+</div>
+
+<div class="pencil" id="pencil" aria-hidden="true">
+  <svg viewBox="0 0 64 64"><g transform="translate(6,58) rotate(40)">
+    <path d="M0 0 L-4 -10 L4 -10 Z" fill="#E8C48B" stroke="#6b4f2a" stroke-width=".8"/>
+    <path d="M0 0 L-1.4 -3.6 L1.4 -3.6 Z" fill="#33363f"/>
+    <rect x="-4" y="-42" width="8" height="32" fill="#F2C230" stroke="#8a6a00" stroke-width=".8"/>
+    <rect x="-1" y="-42" width="2" height="32" fill="#FFE27A"/>
+    <rect x="-4.3" y="-47" width="8.6" height="5" fill="#B8BDC6" stroke="#6c7280" stroke-width=".8"/>
+    <rect x="-4" y="-53" width="8" height="6" rx="2" fill="#E88A9A" stroke="#9c4455" stroke-width=".8"/>
+  </g></svg>
+</div>
+
+<div id="store" hidden>
+  <section class="page left" id="pg1" aria-label="Your plan, page 1">
+    <div class="ph"><h2 class="pt">My plan</h2><span class="pno">1</span></div>
+    <div class="pb dots" id="planBody"></div>
+    <div class="pf"><span id="saveState" role="status"></span><span id="planActions"></span></div>
+  </section>
+
+  <section class="page right" id="pg2" aria-label="Instant Planner, page 2">
+    <div class="ph"><h2 class="pt">Instant Planner</h2><span class="pno">2</span><button class="turn-btn" type="button" data-turn="1">Turn page &#10140;</button></div>
+    <div class="pb fill ruled" id="plannerPage">
+      <div class="planner-page-toolbar">
+        <p class="hint">Your upcoming study sessions. Tick tasks as you finish them, or let the voice bot read them aloud.</p>
+        <div class="planner-page-actions">
+          <button type="button" class="btn" id="plannerEditBtn">＋ Add exams / rebuild plan</button>
+          <button type="button" class="btn" id="speakTodayBtn">🔊 Speak today's tasks</button>
+          <button type="button" class="btn" id="speakPlanBtn">▶ Read all pending tasks</button>
+          <button type="button" class="btn" id="stopPlannerVoiceBtn">■ Stop voice</button>
+        </div>
+        <p id="plannerPageStatus" class="sb-status" role="status" aria-live="polite">Your study tasks will appear here.</p>
+      </div>
+      <div id="plannerPageTasks" class="planner-page-tasks" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="page left" id="pg3" aria-label="Progress, page 3">
+    <div class="ph"><button class="turn-btn" type="button" data-turn="-1">&#10140; Back</button><h2 class="pt">Progress</h2><span class="pno">3</span></div>
+    <div class="pb dots" id="progBody">
+      <div class="pie-wrap">
+        <svg class="pie" viewBox="0 0 240 240" role="img" id="pieSvg" aria-label="Pie chart of tasks done and left">
+          <defs>
+            <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" style="fill:var(--paper)"/><line x1="0" y1="0" x2="0" y2="8" style="stroke:var(--graphite);stroke-width:2.2"/></pattern>
+            <filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3.5"/></filter>
+          </defs>
+          <path id="pLeft" d="" style="fill:url(#hatch)"/>
+          <path id="pDone" d="" style="fill:var(--ok)"/>
+          <circle cx="120" cy="120" r="100" fill="none" style="stroke:var(--graphite);stroke-width:3.5" filter="url(#rough)"/>
+          <circle cx="120" cy="120" r="56" style="fill:var(--paper);stroke:var(--graphite);stroke-width:2.5" filter="url(#rough)"/>
+          <text x="120" y="130" id="pPct">0%</text>
+          <text x="120" y="154" class="sub" id="pSub">done</text>
+        </svg>
+      </div>
+      <div class="legend"><span><i class="d"></i><span id="lgDone">0 done</span></span><span><i class="l"></i><span id="lgLeft">0 left</span></span></div>
+      <div class="subjects" id="subjects"></div>
+    </div>
+    <div class="pf"><span id="progNote"></span></div>
+  </section>
+
+  <section class="page right" id="pg4" aria-label="Reminders, page 4">
+    <div class="ph"><h2 class="pt">Reminders</h2><span class="pno">4</span><button class="turn-btn" type="button" data-turn="1">Turn page &#10140;</button></div>
+    <div class="pb ruled" id="remBody">
+      <form class="remform" id="remForm" autocomplete="off">
+        <input type="text" id="remText" maxlength="120" placeholder="What should I remind you about?" aria-label="Reminder text">
+        <input type="datetime-local" id="remAt" aria-label="Reminder time">
+        <label class="sb-inline-label">Repeat <select id="remRepeat" aria-label="Repeat reminder"><option value="none">Once</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select></label>
+        <div class="quick" id="remQuick">
+          <button type="button" data-min="10">in 10 min</button>
+          <button type="button" data-min="30">in 30 min</button>
+          <button type="button" data-min="60">in 1 hour</button>
+          <button type="button" data-tom="8">tomorrow 8 am</button>
+        </div>
+        <div><button class="btn" type="submit">Add reminder</button> <span class="hint" id="remMsg" role="status"></span></div>
+      </form>
+      <div id="remList"></div>
+    </div>
+    <div class="pf"><span>In-app alerts work while the page is open. For closed-page alerts, use Add to calendar; background push is not yet enabled.</span><span id="remDone"></span></div>
+  </section>
+
+  <section class="page left" id="pg5" aria-label="Problem Solver, page 5">
+    <div class="ph"><button class="turn-btn" type="button" data-turn="-1">&#10140; Back</button><h2 class="pt">Problem Solver</h2><span class="pno">5</span></div>
+    <div class="pb fill ruled" id="chatSolver"></div>
+  </section>
+
+  <section class="page right" id="pg6" aria-label="Code and Concepts Tutor, page 6">
+    <div class="ph"><h2 class="pt">Code &amp; Concepts</h2><span class="pno">6</span></div>
+    <div class="pb fill ruled" id="chatTutor"></div>
+  </section>
+</div>
+<script>window.__SB={uid:"public-demo",name:"Browser AI demo",guest:true};window.__SB_BROWSER_AI=true;</script><style>#logout{display:none!important}</style><script src="browser-ai.js"></script><script src="shim.js"></script>
+<script src="model-picker.js"></script>
+<script src="study-engine.js"></script>
+<script src="instant-planner.js"></script>
+<script src="study-guard.js"></script>
+<script>
+(function () {
+'use strict';
+var doc = document.documentElement;
+function $(s, r) { return (r || document).querySelector(s); }
+function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+function uid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- shared state ---------- */
+var state = { plan: null, reminders: [], study: { exams: [] }, notify: { sound: false, quietStart: '22:00', quietEnd: '07:00' } };
+var sampleFn = null, imgLimits = null, sampleReady = Promise.resolve(), NO_AI_MSG = 'The optional AI tutor is not ready. Try loading the tutor again, or use the Instant Planner for your schedule.';
+var speakOn = true, recLang = 'en-IN', activeRec = null;
+var api = {};   // functions defined in later parts
+
+/* ---------- theme ---------- */
+function setTheme(mode) { doc.setAttribute('data-theme', mode); }
+$('#theme').addEventListener('click', function () {
+  var cur = doc.getAttribute('data-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  setTheme(cur === 'dark' ? 'light' : 'dark');
+});
+
+/* ---------- speaking ---------- */
+function hasDevanagari(s) { return /[ऀ-ॿ]/.test(s); }
+function stopSpeaking() { try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {} }
+function pickVoice(lang) {
+  try {
+    var vs = window.speechSynthesis.getVoices();
+    for (var i = 0; i < vs.length; i++) if (vs[i].lang === lang) return vs[i];
+    for (var j = 0; j < vs.length; j++) if (vs[j].lang.slice(0, 2) === lang.slice(0, 2)) return vs[j];
+  } catch (e) {}
+  return null;
+}
+function speak(text, force) {
+  if ((!speakOn && !force) || !('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    var clean = String(text).replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu, '').replace(/\s+/g, ' ').trim();
+    if (!clean) return;
+    var u = new SpeechSynthesisUtterance(clean);
+    u.lang = hasDevanagari(clean) ? 'hi-IN' : 'en-IN';
+    var v = pickVoice(u.lang); if (v) u.voice = v;
+    window.speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function setPlannerStatus(message) {
+  var node = $('#plannerPageStatus');
+  if (node) node.textContent = String(message || '');
+}
+function setBrowserAiStatus(message) {
+  var node = $('#browserAiStatus');
+  if (node) node.textContent = String(message || '');
+}
+function speakBot(message, statusMessage) {
+  var text = String(message || '').trim();
+  setPlannerStatus(statusMessage || text);
+  if (text) speak(text);
+}
+var vt = $('#voiceToggle');
+vt.addEventListener('click', function () {
+  speakOn = !speakOn; vt.setAttribute('aria-pressed', String(speakOn));
+  $('#voiceLabel').textContent = speakOn ? 'Voice on' : 'Voice off';
+  vt.setAttribute('aria-label', speakOn ? 'Turn voice bot off' : 'Turn voice bot on');
+  if (!speakOn) stopSpeaking();
+});
+if (!('speechSynthesis' in window)) { vt.hidden = true; speakOn = false; }
+$('#langBtn').addEventListener('click', function () {
+  recLang = recLang === 'en-IN' ? 'hi-IN' : 'en-IN';
+  var hi = recLang === 'hi-IN';
+  this.textContent = hi ? 'Mic: हिन्दी' : 'Mic: English';
+  this.setAttribute('aria-label', 'Microphone language: ' + (hi ? 'Hindi' : 'English (India)') + '. Press to switch.');
+});
+
+/* ---------- plan data ---------- */
+function newTask(subject, text, mins, done) { return { id: uid('t'), subject: subject, text: text || '', mins: mins, done: !!done }; }
+function makeExample() {
+  return { example: true, title: 'Example: 3 subjects, 2 hours a day', tips: 'Study 25 to 50 minutes, then rest 5 to 10.', days: [
+    { label: 'Day 1', tasks: [ newTask('Maths', 'Revise chapter notes, solve 10 problems', 50, true), newTask('Physics', 'Formula sheet and 5 numericals', 40, true), newTask('English', 'Read one sample essay, write a summary', 30, false) ] },
+    { label: 'Day 2', tasks: [ newTask('Chemistry', 'Reactions revision, 10 short questions', 50, false), newTask('Maths', 'Past paper, first half', 45, false), newTask('Physics', 'Fix the mistakes from Day 1', 25, false) ] }
+  ] };
+}
+function normalizePlan(p, old) {
+  if (!p || !Array.isArray(p.days)) return null;
+  var prev = {};
+  if (old) old.days.forEach(function (d) { d.tasks.forEach(function (t) { prev[(t.subject + '|' + t.text).toLowerCase()] = !!t.done; }); });
+  var days = p.days.slice(0, 14).map(function (d, i) {
+    var tasks = (Array.isArray(d && d.tasks) ? d.tasks : []).slice(0, 10).map(function (t) {
+      var subject = String((t && t.subject) || 'Study').slice(0, 40), text = String((t && t.text) || '').slice(0, 160);
+      var mins = clamp(Math.round(Number(t && t.mins) || 30), 5, 240);
+      var done = (t && typeof t.done === 'boolean' && !old) ? t.done : prev[(subject + '|' + text).toLowerCase()] === true;
+      var o = newTask(subject, text, mins, done); return o;
+    });
+    return { label: String((d && d.label) || ('Day ' + (i + 1))).slice(0, 40), tasks: tasks };
+  }).filter(function (d) { return d.tasks.length; });
+  if (!days.length) return null;
+  return { title: String(p.title || 'My study plan').slice(0, 80), tips: String(p.tips || '').slice(0, 300), days: days };
+}
+function allTasks() { var out = []; state.plan.days.forEach(function (d, i) { d.tasks.forEach(function (t) { out.push({ day: d, di: i, task: t }); }); }); return out; }
+function nextTask() { var a = allTasks(); for (var i = 0; i < a.length; i++) if (!a[i].task.done) return a[i]; return null; }
+
+/* ---------- storage: private db doc, with this-device fallback ---------- */
+var notebookDoc = null, saveTimer = 0, saving = false, saveEl = $('#saveState');
+var lastTs = 0;
+function payload() { return { v: 2, ts: lastTs, plan: state.plan && !state.plan.example ? state.plan : null, reminders: state.reminders, study: state.study, notify: state.notify }; }
+var LS_KEY = 'studybuddy.nb' + (window.__SB ? '.' + window.__SB.uid : ''); // one key per signed-in student, so shared computers never mix notebooks
+function localSet() { try { localStorage.setItem(LS_KEY, JSON.stringify(payload())); } catch (e) {} }
+function localGet() { try { var s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+function scheduleSave() { lastTs = Date.now(); localSet(); clearTimeout(saveTimer); saveEl.textContent = 'Saving...'; saveTimer = setTimeout(flush, 500); }
+function flushNow() { if (saveTimer) { clearTimeout(saveTimer); saveTimer = 0; localSet(); if (notebookDoc && !saving) { try { notebookDoc.set(payload()); } catch (e) {} } } }
+window.addEventListener('pagehide', flushNow);
+window.addEventListener('online', function () { if (notebookDoc) scheduleSave(); });
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flushNow(); });
+function flush() {
+  saveTimer = 0;
+  if (saving) { saveTimer = setTimeout(flush, 300); return; }
+  saving = true; localSet();
+  if (window.__SB_BROWSER_AI) { saveEl.textContent = 'Saved in this browser'; saving = false; return; }
+  var job = notebookDoc ? notebookDoc.set(payload()) : Promise.reject(new Error('no store'));
+  job.then(function () { saveEl.textContent = 'Saved'; }, function (e) { saveEl.textContent = e && e.code === 'session_expired' ? 'Signed out. Reload the page to sign in again.' : 'Saved on this device only. Will retry when online.'; }).then(function () { saving = false; });
+}
+function applyLoaded(d) {
+  if (!d) return false;
+  var changed = false;
+  if (d.plan) { var p = normalizePlan(d.plan, null); if (p) { d.plan.days.forEach(function (dd, i) { if (p.days[i]) dd.tasks.forEach(function (t, j) { if (p.days[i].tasks[j]) p.days[i].tasks[j].done = !!t.done; }); }); state.plan = p; changed = true; } }
+  if (Array.isArray(d.reminders)) {
+    state.reminders = d.reminders.filter(function (r) { return r && typeof r.at === 'number' && r.text; }).slice(0, 40).map(function (r) { return { id: r.id || uid('r'), text: String(r.text).slice(0, 120), at: r.at, fired: !!r.fired, seen: !!r.seen, done: !!r.done, repeat: r.repeat === 'daily' || r.repeat === 'weekly' ? r.repeat : 'none' }; });
+    changed = true;
+  }
+  if (d.study && Array.isArray(d.study.exams)) {
+    state.study = { exams: d.study.exams.slice(0, 8).map(function (x) {
+      return { id: String(x.id || uid('ex')).slice(0, 40), subject: String(x.subject || 'Subject').slice(0, 60), date: String(x.date || '').slice(0, 10), topics: (Array.isArray(x.topics) ? x.topics : []).slice(0, 40).map(function (t) {
+        return { id: String(t.id || uid('tp')).slice(0, 40), name: String(t.name || 'Topic').slice(0, 80), confidence: clamp(Number(t.confidence) || 0, 0, 3), lastPracticed: Number(t.lastPracticed) || 0 };
+      }) };
+    }) }; changed = true;
+  }
+  if (d.notify) { state.notify = { sound: !!d.notify.sound, quietStart: /^\d\d:\d\d$/.test(d.notify.quietStart) ? d.notify.quietStart : '22:00', quietEnd: /^\d\d:\d\d$/.test(d.notify.quietEnd) ? d.notify.quietEnd : '07:00' }; changed = true; }
+  return changed;
+}
+function initStore() {
+  var L = localGet(); if (L && L.ts) lastTs = L.ts;
+  if (applyLoaded(L)) { api.renderAll(); if (typeof checkReminders === 'function') checkReminders(true); saveEl.textContent = 'Saved on this device'; }
+  if (!(window.claude && window.claude.use)) return;
+  Promise.all([window.claude.use('db'), window.claude.use('user')]).then(function (r) {
+    var db = r[0], user = r[1];
+    if (!db || !user) throw new Error('no db');
+    return user.id().then(function (id) {
+      if (!id) throw new Error('no id');
+      notebookDoc = db.doc('data/users/' + id + '/notebook');
+      var old = db.doc('data/users/' + id + '/plan');
+      return notebookDoc.get().then(function (s) {
+        if (s.exists) return s.data();
+        return old.get().then(function (o) { return o.exists ? { plan: o.data().plan } : null; });
+      });
+    });
+  }).then(function (d) { if (d && (d.ts || 0) >= lastTs && applyLoaded(d)) { lastTs = d.ts || lastTs; api.renderAll(); if (typeof checkReminders === 'function') checkReminders(true); saveEl.textContent = 'Saved'; } }).catch(function () {});
+}
+
+/* ---------- inline editing ---------- */
+function editable(node, commit) {
+  node.contentEditable = 'true'; node.spellcheck = false; node.setAttribute('role', 'textbox');
+  var orig = '';
+  node.addEventListener('focus', function () { orig = node.textContent; });
+  node.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); node.blur(); }
+    else if (e.key === 'Escape') { node.textContent = orig; node.blur(); }
+  });
+  node.addEventListener('paste', function (e) {
+    e.preventDefault();
+    var t = ((e.clipboardData || window.clipboardData).getData('text') || '').replace(/\s+/g, ' ');
+    try { document.execCommand('insertText', false, t); } catch (x) {}
+  });
+  node.addEventListener('blur', function () {
+    var v = node.textContent.replace(/\s+/g, ' ').trim(); node.textContent = v;
+    if (v !== orig) commit(v);
+  });
+}
+
+/* ---------- plan page ---------- */
+var focusTaskId = null;
+function touch() {
+  var p = state.plan;
+  if (p.example) {
+    p.example = false;
+    if (/^example/i.test(p.title)) p.title = 'My study plan';
+    var tt = $('.plan-title'); if (tt) tt.textContent = p.title;
+    var st = $('.stamp'); if (st) st.remove();
+  }
+  scheduleSave(); refreshStats(); renderPlannerPage();
+}
+var BOX = '<svg viewBox="0 0 30 30" aria-hidden="true"><path class="sq" d="M5 5.5 C10 4.6 18 5.2 25 4.8 C25.6 10 24.6 18 25.2 25 C19 25.6 11 24.6 4.8 25.3 C5.4 19 4.4 11 5 5.5 Z"/><path class="tick" d="M7 16 C9 18 11 21 12.5 23 C16 15 20 9 26 3"/></svg>';
+function renderPlan() {
+  var p = state.plan, body = $('#planBody'); body.textContent = '';
+  var head = el('div', 'plan-head');
+  var title = el('h3', 'plan-title', p.title);
+  editable(title, function (v) { p.title = (v || p.title).slice(0, 80); title.textContent = p.title; touch(); });
+  head.appendChild(title);
+  if (p.example) head.appendChild(el('span', 'stamp', 'Example: try it'));
+  body.appendChild(head);
+  var mini = el('div', 'mini'); mini.appendChild(el('span', null, '')); mini.firstChild.id = 'planCount';
+  var track = el('div', 'track'); var fill = el('div', 'fill'); fill.id = 'planFill'; track.appendChild(fill); mini.appendChild(track); body.appendChild(mini);
+
+  p.days.forEach(function (d, di) {
+    var day = el('section', 'day'); var dh = el('div', 'day-head');
+    var h = el('h3', null, d.label); editable(h, function (v) { d.label = (v || d.label).slice(0, 40); h.textContent = d.label; touch(); });
+    var meta = el('span', 'dmeta'); function dm() { meta.textContent = d.tasks.reduce(function (s, t) { return s + t.mins; }, 0) + ' min'; } dm();
+    dh.appendChild(h); dh.appendChild(meta); day.appendChild(dh);
+    var ul = el('ul');
+    d.tasks.forEach(function (t) {
+      var li = el('li', 'task' + (t.done ? ' done' : ''));
+      var box = el('button', 'box'); box.type = 'button'; box.innerHTML = BOX;
+      box.setAttribute('role', 'checkbox'); box.setAttribute('aria-checked', String(!!t.done)); box.setAttribute('aria-label', 'Mark ' + t.subject + ' done');
+      box.addEventListener('click', function () { t.done = !t.done; li.classList.toggle('done', t.done); box.setAttribute('aria-checked', String(t.done)); touch(); });
+      var main = el('div', 'tmain'); var subj = el('span', 'subj', t.subject); var what = el('span', 'what', t.text);
+      subj.dataset.id = t.id;
+      editable(subj, function (v) { t.subject = (v || t.subject).slice(0, 40); subj.textContent = t.subject; touch(); });
+      editable(what, function (v) { t.text = v.slice(0, 160); touch(); });
+      what.setAttribute('data-ph', 'add details');
+      main.appendChild(subj); main.appendChild(what);
+      var mins = el('span', 'mins'); var mn = el('span', null, String(t.mins)); mins.appendChild(mn); mins.appendChild(document.createTextNode(' min'));
+      editable(mn, function (v) { var n = parseInt(v, 10); if (n > 0) t.mins = clamp(n, 5, 240); mn.textContent = String(t.mins); dm(); touch(); });
+      var rm = el('button', 'rm', '×'); rm.type = 'button'; rm.setAttribute('aria-label', 'Remove ' + t.subject);
+      rm.addEventListener('click', function () { d.tasks.splice(d.tasks.indexOf(t), 1); touch(); renderPlan(); });
+      li.appendChild(box); li.appendChild(main); li.appendChild(mins); li.appendChild(rm); ul.appendChild(li);
+    });
+    day.appendChild(ul);
+    var add = el('button', 'add', '+ add a task'); add.type = 'button';
+    add.addEventListener('click', function () { var nt = newTask('New task', '', 30, false); d.tasks.push(nt); focusTaskId = nt.id; touch(); renderPlan(); });
+    day.appendChild(add); body.appendChild(day);
+  });
+  var addDay = el('button', 'add', '+ add a day'); addDay.type = 'button';
+  addDay.addEventListener('click', function () { p.days.push({ label: 'Day ' + (p.days.length + 1), tasks: [] }); touch(); renderPlan(); });
+  body.appendChild(addDay);
+  if (p.tips) body.appendChild(el('p', 'tips', p.tips));
+
+  var act = $('#planActions'); act.textContent = '';
+  if (!p.example) {
+    var clear = el('button', 'linkish', 'Clear plan'); clear.type = 'button';
+    clear.addEventListener('click', function () {
+      act.textContent = '';
+      var c = el('span', 'confirm'); c.appendChild(el('span', null, 'Delete this plan and its progress?'));
+      var yes = el('button', 'linkish', 'Yes, clear'); yes.type = 'button';
+      var no = el('button', 'linkish', 'Keep it'); no.type = 'button';
+      yes.addEventListener('click', function () { state.plan = makeExample(); scheduleSave(); renderAll(); });
+      no.addEventListener('click', renderPlan);
+      c.appendChild(yes); c.appendChild(no); act.appendChild(c);
+    });
+    act.appendChild(clear);
+  } else { act.appendChild(el('span', null, 'Click a box to tick it. Click any text to edit it.')); }
+  refreshStats();
+  renderPlannerPage();
+  if (focusTaskId) { var f = $('[data-id="' + focusTaskId + '"]', body); focusTaskId = null; if (f) { f.focus(); try { document.getSelection().selectAllChildren(f); } catch (e) {} } }
+}
+function renderPlannerPage() {
+  var host = $('#plannerPageTasks');
+  if (!host || !state.plan) return;
+  host.textContent = '';
+  var all = allTasks();
+  var done = all.filter(function (x) { return x.task.done; }).length;
+  var pending = all.length - done;
+  var summary = el('div', 'planner-page-summary');
+  summary.appendChild(el('span', null, state.plan.example ? 'Sample schedule' : state.plan.title));
+  summary.appendChild(el('span', 'planner-day-total', done + ' / ' + all.length + ' tasks complete'));
+  host.appendChild(summary);
+  if (state.plan.example) host.appendChild(el('p', 'planner-empty', 'This is a sample schedule. Add your subjects and exam dates to build your own plan.'));
+  if (!all.length) {
+    host.appendChild(el('p', 'planner-empty', 'No tasks yet. Add an exam and generate your plan to get started.'));
+    return;
+  }
+  state.plan.days.forEach(function (day, dayIndex) {
+    if (!day.tasks.length) return;
+    var card = el('section', 'planner-day-card');
+    var heading = el('div', 'planner-day-title');
+    heading.appendChild(el('span', null, day.label));
+    heading.appendChild(el('span', 'planner-day-total', day.tasks.reduce(function (sum, task) { return sum + task.mins; }, 0) + ' min'));
+    card.appendChild(heading);
+    day.tasks.forEach(function (task) {
+      var row = el('label', 'planner-task-row' + (task.done ? ' done' : ''));
+      var checkbox = el('input'); checkbox.type = 'checkbox'; checkbox.checked = !!task.done;
+      checkbox.setAttribute('aria-label', (task.done ? 'Mark incomplete: ' : 'Mark complete: ') + task.subject + ', ' + task.text);
+      checkbox.addEventListener('change', function () {
+        task.done = checkbox.checked;
+        touch();
+        renderPlan();
+      });
+      var copy = el('span', 'planner-task-copy');
+      copy.appendChild(el('span', 'planner-task-subject', task.subject));
+      copy.appendChild(el('span', 'planner-task-detail', task.text));
+      row.appendChild(checkbox); row.appendChild(copy); row.appendChild(el('span', 'planner-task-mins', task.mins + ' min'));
+      card.appendChild(row);
+    });
+    host.appendChild(card);
+  });
+  if (!pending && !state.plan.example) host.appendChild(el('p', 'planner-empty', 'Everything is complete. Great work!'));
+}
+function tasksForSpeech(tasks) {
+  return tasks.map(function (task, index) {
+    return (index + 1) + '. ' + task.subject + '. ' + (task.text || 'Study session') + '. ' + task.mins + ' minutes.';
+  }).join(' ');
+}
+function speakTodayTasks() {
+  if (!('speechSynthesis' in window)) { setPlannerStatus('This browser does not support spoken audio.'); return; }
+  var day = state.plan.days.find(function (d) { return /^today\b/i.test(d.label); }) || state.plan.days.find(function (d) { return d.tasks.some(function (t) { return !t.done; }); }) || state.plan.days[0];
+  if (!day || !day.tasks.length) { setPlannerStatus('Generate a plan first to hear your tasks.'); return; }
+  var pending = day.tasks.filter(function (t) { return !t.done; });
+  if (!pending.length) { speakBot('You have finished all tasks for ' + day.label + '. Nice work.'); return; }
+  if (!speakOn) { setPlannerStatus('Turn Voice on in the top toolbar to hear your tasks.'); return; }
+  speak(tasksForSpeech(pending));
+  setPlannerStatus('Reading ' + pending.length + ' pending task' + (pending.length === 1 ? '' : 's') + ' for ' + day.label + '.');
+}
+function speakAllPendingTasks() {
+  if (!('speechSynthesis' in window)) { setPlannerStatus('This browser does not support spoken audio.'); return; }
+  if (state.plan.example && !state.plan.days.length) { setPlannerStatus('Generate a plan first to hear your tasks.'); return; }
+  var lines = [];
+  state.plan.days.forEach(function (day) {
+    var pending = day.tasks.filter(function (task) { return !task.done; });
+    if (pending.length) lines.push(day.label + '. ' + tasksForSpeech(pending));
+  });
+  if (!lines.length) { speakBot('All your study tasks are complete. Nice work.'); return; }
+  if (!speakOn) { setPlannerStatus('Turn Voice on in the top toolbar to hear your tasks.'); return; }
+  speak(lines.join(' '));
+  setPlannerStatus('Reading pending tasks for ' + lines.length + ' day' + (lines.length === 1 ? '' : 's') + '.');
+}
+function showPlannerPage() {
+  if (mode === 'wide') goSpread(0);
+  else goPage(1);
+}
+
+/* ---------- progress page: pie + subject bars ---------- */
+var pieShown = 0, pieRAF = 0;
+function counts() { var a = allTasks(), d = a.filter(function (x) { return x.task.done; }).length; return { done: d, total: a.length, frac: a.length ? d / a.length : 0 }; }
+function setPie(frac) {
+  var R = 100, cx = 120, cy = 120, dP = $('#pDone'), lP = $('#pLeft');
+  var full = 'M' + (cx - R) + ' ' + cy + ' a' + R + ' ' + R + ' 0 1 0 ' + (2 * R) + ' 0 a' + R + ' ' + R + ' 0 1 0 ' + (-2 * R) + ' 0 Z';
+  function arc(f0, f1) {
+    var a0 = f0 * 2 * Math.PI - Math.PI / 2, a1 = f1 * 2 * Math.PI - Math.PI / 2;
+    return 'M' + cx + ' ' + cy + ' L' + (cx + R * Math.cos(a0)).toFixed(2) + ' ' + (cy + R * Math.sin(a0)).toFixed(2) +
+      ' A' + R + ' ' + R + ' 0 ' + ((f1 - f0) > 0.5 ? 1 : 0) + ' 1 ' + (cx + R * Math.cos(a1)).toFixed(2) + ' ' + (cy + R * Math.sin(a1)).toFixed(2) + ' Z';
+  }
+  if (frac <= 0.0005) { dP.setAttribute('d', ''); lP.setAttribute('d', full); }
+  else if (frac >= 0.9995) { dP.setAttribute('d', full); lP.setAttribute('d', ''); }
+  else { dP.setAttribute('d', arc(0, frac)); lP.setAttribute('d', arc(frac, 1)); }
+  $('#pPct').textContent = Math.round(frac * 100) + '%';
+}
+function animatePie(from) {
+  cancelAnimationFrame(pieRAF);
+  var target = counts().frac;
+  if (from != null) pieShown = from;
+  if (reduce) { pieShown = target; setPie(target); return; }
+  var start = performance.now(), v0 = pieShown;
+  (function step(now) {
+    var k = clamp((now - start) / 700, 0, 1), e = 1 - Math.pow(1 - k, 3);
+    pieShown = v0 + (target - v0) * e; setPie(pieShown);
+    if (k < 1) pieRAF = requestAnimationFrame(step);
+  })(start);
+}
+function refreshStats() {
+  var c = counts();
+  var pc = $('#planCount'); if (pc) pc.textContent = c.done + ' of ' + c.total + ' done';
+  var pf = $('#planFill'); if (pf) pf.style.width = (c.frac * 100) + '%';
+  $('#lgDone').textContent = c.done + ' done'; $('#lgLeft').textContent = (c.total - c.done) + ' left';
+  $('#pieSvg').setAttribute('aria-label', 'Pie chart: ' + c.done + ' tasks done, ' + (c.total - c.done) + ' left');
+  var subs = {}, order = [];
+  allTasks().forEach(function (x) { var k = x.task.subject.trim().toLowerCase(); if (!subs[k]) { subs[k] = { name: x.task.subject.trim(), d: 0, t: 0 }; order.push(k); } subs[k].t++; if (x.task.done) subs[k].d++; });
+  var box = $('#subjects'); box.textContent = '';
+  order.forEach(function (k) {
+    var s = subs[k], row = el('div', 'srow'); row.appendChild(el('b', null, s.name));
+    var bar = el('div', 'sbar'), fill = el('span'); fill.style.width = (s.t ? s.d / s.t * 100 : 0) + '%'; bar.appendChild(fill); row.appendChild(bar);
+    row.appendChild(el('em', null, s.d + '/' + s.t)); box.appendChild(row);
+  });
+  var n = nextTask(), note = $('#progNote');
+  note.textContent = state.plan.example ? 'Example numbers. Your own plan will appear here.' : (n ? 'Up next: ' + n.task.subject + ', ' + n.task.mins + ' min' : 'Everything is done.');
+  animatePie(null);
+}
+
+/* ---------- reminders ---------- */
+var remMsg = $('#remMsg');
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function localISO(ms) { var d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function fmtWhen(ms) {
+  var d = new Date(ms), now = new Date(), same = d.toDateString() === now.toDateString();
+  var t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return same ? 'Today, ' + t : d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) + ', ' + t;
+}
+function fmtRel(ms) {
+  var diff = ms - Date.now(), a = Math.abs(diff), m = Math.round(a / 60000), txt;
+  if (m < 1) txt = 'less than a minute'; else if (m < 60) txt = m + ' min'; else if (m < 1440) txt = Math.round(m / 60 * 10) / 10 + ' h'; else txt = Math.round(m / 144) / 10 + ' days';
+  return diff >= 0 ? 'in ' + txt : txt + ' ago';
+}
+function setDefaultRemTime() { $('#remAt').value = localISO(Date.now() + 30 * 60000); }
+function addReminder(text, at, repeat) {
+  text = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  if (!text || !(at > Date.now())) return false;
+  if (state.reminders.some(function (r) { return !r.done && r.text === text && Math.abs(r.at - at) < 60000; })) return true;
+  state.reminders.push({ id: uid('r'), text: text, at: at, fired: false, seen: false, done: false, repeat: repeat || ($('#remRepeat') || {}).value || 'none' });
+  scheduleSave(); renderReminders(); return true;
+}
+function renderReminders() {
+  var list = $('#remList'); list.textContent = '';
+  var act = state.reminders.filter(function (r) { return !r.done; }).sort(function (a, b) { return a.at - b.at; });
+  if (!act.length) list.appendChild(el('p', 'empty', 'No active reminders. Add one above, or tell Buddy: "remind me in 20 minutes to revise chemistry".'));
+  act.forEach(function (r) {
+    var c = el('div', 'rem' + (r.fired ? ' ring' : '')); c.appendChild(el('div', 'rt', r.text));
+    var w = el('div', 'when'); w.dataset.at = r.at; w.textContent = fmtWhen(r.at) + ' (' + fmtRel(r.at) + ')'; c.appendChild(w);
+    var a = el('div', 'acts');
+    var done = el('button', null, 'Done'); done.type = 'button'; done.setAttribute('aria-label', 'Done: ' + r.text);
+    done.addEventListener('click', function () { finishReminder(r); });
+    a.appendChild(done);
+    var cal = el('button', null, 'Add to calendar'); cal.type = 'button'; cal.setAttribute('aria-label', 'Add to calendar: ' + r.text); cal.addEventListener('click', function () { downloadICS(r); }); a.appendChild(cal);
+    if (r.fired) { [10, 30, 60].forEach(function (m) { var sn = el('button', null, 'Snooze ' + m + ' min'); sn.type = 'button'; sn.addEventListener('click', function () { snooze(r, m); }); a.appendChild(sn); }); }
+    if (r.repeat && r.repeat !== 'none') c.appendChild(el('div', 'when', 'Repeats ' + r.repeat));
+    var del = el('button', null, 'Remove'); del.type = 'button'; del.setAttribute('aria-label', 'Remove reminder: ' + r.text);
+    del.addEventListener('click', function () { state.reminders.splice(state.reminders.indexOf(r), 1); scheduleSave(); renderReminders(); });
+    a.appendChild(del); c.appendChild(a); list.appendChild(c);
+  });
+  var n = state.reminders.filter(function (r) { return r.done; }).length;
+  $('#remDone').textContent = n ? n + ' finished' : '';
+  renderAlarm();
+  if (typeof renderBell === 'function') renderBell();
+}
+function icsText(s) { return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+function icsFor(r) {
+  function z(ms) { return new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d+/, ''); }
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Study Buddy//EN', 'BEGIN:VEVENT', 'UID:' + r.id + '@studybuddy', 'DTSTAMP:' + z(Date.now()), 'DTSTART:' + z(r.at), 'DTEND:' + z(r.at + 15 * 60000),
+    'SUMMARY:' + icsText('Study: ' + r.text), 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsText(r.text), 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n') + '\r\n';
+}
+function downloadICS(r) {
+  try {
+    var blob = new Blob([icsFor(r)], { type: 'text/calendar' }), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'study-reminder.ics'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+    remMsg.textContent = 'Calendar file downloaded. Open it to add the alert to your phone or computer calendar.';
+  } catch (e) { remMsg.textContent = 'Could not create the calendar file in this browser.'; }
+}
+function askNotify() { if (!('Notification' in window)) return Promise.resolve('unsupported'); return Notification.requestPermission(); }
+function showNotify(texts) { try { if ('Notification' in window && Notification.permission === 'granted') new Notification('Study Buddy reminder', { body: texts.join('. ') }); } catch (e) {} }
+function snooze(r, minutes) { r.at = Date.now() + (minutes || 10) * 60000; r.fired = false; r.seen = false; scheduleSave(); renderReminders(); }
+function finishReminder(r) {
+  if (r.repeat === 'daily' || r.repeat === 'weekly') {
+    var step = r.repeat === 'daily' ? 1 : 7;
+    var next = new Date(r.at), loops = 0;
+    // Advance in the student's browser-local calendar to avoid DST clock drift.
+    do { next.setDate(next.getDate() + step); loops++; } while (next.getTime() <= Date.now() && loops < 365);
+    if (next.getTime() <= Date.now()) { next = new Date(Date.now()); next.setDate(next.getDate() + step); }
+    r.at = next.getTime();
+    r.fired = false; r.seen = false; r.done = false;
+  } else r.done = true;
+  scheduleSave(); renderReminders();
+}
+function renderAlarm() {
+  var box = $('#alarm'); box.textContent = '';
+  var ring = state.reminders.filter(function (r) { return !r.done && r.fired && !r.seen; });
+  box.hidden = !ring.length;
+  ring.forEach(function (r) {
+    var c = el('div', 'rem'); c.appendChild(el('div', 'rt', 'Reminder: ' + r.text));
+    var a = el('div', 'acts');
+    var d = el('button', null, 'Done'); d.type = 'button'; d.addEventListener('click', function () { finishReminder(r); });
+    a.appendChild(d); [10, 30, 60].forEach(function (m) { var s = el('button', null, 'Snooze ' + m + 'm'); s.type = 'button'; s.addEventListener('click', function () { snooze(r, m); }); a.appendChild(s); }); c.appendChild(a); box.appendChild(c);
+  });
+}
+function beep() {
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    var ctx = new AC();
+    [0, 0.28, 0.56].forEach(function (t) {
+      var o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.22);
+      o.connect(g); g.connect(ctx.destination); o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.25);
+    });
+  } catch (e) {}
+}
+function checkReminders(silent) {
+  var now = Date.now(), fired = [];
+  state.reminders.forEach(function (r) { if (!r.done && !r.fired && r.at <= now) { r.fired = true; fired.push(r); } });
+  if (fired.length) {
+    scheduleSave(); renderReminders();
+    if (!silent && !withinQuietHours()) {
+      if (state.notify.sound) beep();
+      showNotify(fired.map(function (r) { return r.text; }));
+    }
+  }
+  else $$('#remList .when').forEach(function (w) { var at = Number(w.dataset.at); w.textContent = fmtWhen(at) + ' (' + fmtRel(at) + ')'; });
+}
+$('#remQuick').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.min) $('#remAt').value = localISO(Date.now() + Number(b.dataset.min) * 60000);
+  if (b.dataset.tom) { var d = new Date(); d.setDate(d.getDate() + 1); d.setHours(Number(b.dataset.tom), 0, 0, 0); $('#remAt').value = localISO(d.getTime()); }
+});
+$('#remForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var text = $('#remText').value, at = new Date($('#remAt').value).getTime();
+  if (!text.trim()) { remMsg.textContent = 'Write what to remind you about.'; return; }
+  if (!(at > Date.now())) { remMsg.textContent = 'Pick a time in the future.'; return; }
+  addReminder(text, at); $('#remText').value = ''; remMsg.textContent = 'Added.'; setDefaultRemTime();
+  setTimeout(function () { remMsg.textContent = ''; }, 2000);
+});
+setInterval(checkReminders, 15000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) checkReminders(); });
+
+function renderAll() { renderPlan(); renderReminders(); if (typeof renderStudy === 'function') renderStudy(); }
+api.renderAll = renderAll;
+
+/* ---------- tiny markdown renderer with LaTeX (safe: built from text nodes; KaTeX renders math with trust off) ---------- */
+var MATH_MACROS = {
+  '\\ket': '\\left|#1\\right\\rangle', '\\bra': '\\left\\langle#1\\right|', '\\braket': '\\left\\langle#1\\middle|#2\\right\\rangle',
+  '\\ketbra': '\\left|#1\\right\\rangle\\left\\langle#2\\right|', '\\mel': '\\left\\langle#1\\middle|#2\\middle|#3\\right\\rangle',
+  '\\expval': '\\left\\langle#1\\right\\rangle', '\\abs': '\\left|#1\\right|', '\\norm': '\\left\\|#1\\right\\|',
+  '\\comm': '\\left[#1,#2\\right]', '\\acomm': '\\left\\{#1,#2\\right\\}', '\\dd': '\\mathrm{d}', '\\ii': '\\mathrm{i}',
+  '\\Tr': '\\operatorname{Tr}', '\\tr': '\\operatorname{tr}', '\\hc': '\\text{h.c.}'
+};
+function mathNode(tex, display) {
+  var node = el(display ? 'div' : 'span', display ? 'math-d' : 'math-i');
+  if (window.katex) {
+    try { window.katex.render(tex, node, { displayMode: display, throwOnError: false, trust: false, strict: 'ignore', maxSize: 30, maxExpand: 1000, macros: JSON.parse(JSON.stringify(MATH_MACROS)) }); return node; } catch (e) {}
+  }
+  node.classList.add('math-raw'); node.textContent = display ? '$$' + tex + '$$' : '$' + tex + '$'; return node;
+}
+function inlineMD(node, text) {
+  var i = 0, buf = '', n = text.length, j;
+  function flush() { if (buf) { node.appendChild(document.createTextNode(buf)); buf = ''; } }
+  while (i < n) {
+    var c = text.charAt(i), two = text.substr(i, 2);
+    if (two === '$$') { j = text.indexOf('$$', i + 2); if (j > i + 2) { flush(); node.appendChild(mathNode(text.slice(i + 2, j), true)); i = j + 2; continue; } }
+    if (two === '\\(') { j = text.indexOf('\\)', i + 2); if (j > i + 2) { flush(); node.appendChild(mathNode(text.slice(i + 2, j), false)); i = j + 2; continue; } }
+    if (c === '$') { // $...$ only when it looks like maths: no space inside the dollars, not followed by a digit (so "$5 and $10" stays text)
+      j = i + 1; while (j < n && text.charAt(j) !== '$' && text.charAt(j) !== '\n') j += text.charAt(j) === '\\' ? 2 : 1;
+      if (text.charAt(j) === '$' && j > i + 1 && !/\s/.test(text.charAt(i + 1)) && !/\s/.test(text.charAt(j - 1)) && !/\d/.test(text.charAt(j + 1))) { flush(); node.appendChild(mathNode(text.slice(i + 1, j), false)); i = j + 1; continue; }
+    }
+    if (two === '**') { j = text.indexOf('**', i + 2); if (j > i + 2) { flush(); var st = el('strong'); inlineMD(st, text.slice(i + 2, j)); node.appendChild(st); i = j + 2; continue; } }
+    if (c === '`') { j = text.indexOf('`', i + 1); if (j > i + 1) { flush(); node.appendChild(el('code', null, text.slice(i + 1, j))); i = j + 1; continue; } }
+    buf += c; i++;
+  }
+  flush();
+}
+function copyText(text, btn) {
+  function ok() { var o = btn.textContent; btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = o; }, 1500); }
+  function fb() { var r = document.createRange(); r.selectNodeContents(btn.closest('.codeblock').querySelector('code')); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Selected, press Ctrl+C'; }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fb); else fb();
+}
+function renderMD(box, text) {
+  box.textContent = '';
+  var mblocks = []; // display maths ($$...$$ or \[...\]) can span lines: pull it out first, but never from inside code fences
+  text = text.split(/(```[\s\S]*?(?:```|$))/).map(function (seg, k) {
+    return k % 2 ? seg : seg.replace(/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]/g, function (m, a1, b1) { mblocks.push(a1 != null ? a1 : b1); return '\n\u0001' + (mblocks.length - 1) + '\u0001\n'; });
+  }).join('');
+  var lines = text.split('\n'), i = 0, bullet = /^\s*[-*•]\s+/, numbered = /^\s*\d+[.)]\s+/;
+  while (i < lines.length) {
+    var ln = lines[i], f = ln.match(/^\s*```\s*([\w+#-]*)/);
+    if (f) {
+      var buf = []; i++;
+      while (i < lines.length && !/^\s*```/.test(lines[i])) { buf.push(lines[i]); i++; }
+      i++;
+      var wrap = el('div', 'codeblock'), bar = el('div', 'cb-bar'), code = buf.join('\n');
+      bar.appendChild(el('span', null, f[1] || 'code'));
+      var cb = el('button', 'cb-copy', 'Copy'); cb.type = 'button'; cb.addEventListener('click', function (c, b) { return function () { copyText(c, b); }; }(code, cb));
+      bar.appendChild(cb); wrap.appendChild(bar);
+      var pre = el('pre'); pre.appendChild(el('code', null, code)); wrap.appendChild(pre); box.appendChild(wrap); continue;
+    }
+    var mb = ln.match(/^\u0001(\d+)\u0001$/);
+    if (mb) { var md = el('div', 'mathblock'); md.appendChild(mathNode(mblocks[Number(mb[1])], true)); box.appendChild(md); i++; continue; }
+    if (/^\s*$/.test(ln)) { i++; continue; }
+    var h = ln.match(/^#{1,4}\s+(.*)/);
+    if (h) { var hp = el('p', 'md-h'); inlineMD(hp, h[1]); box.appendChild(hp); i++; continue; }
+    if (bullet.test(ln) || numbered.test(ln)) {
+      var ord = numbered.test(ln), re = ord ? numbered : bullet, list = el(ord ? 'ol' : 'ul');
+      while (i < lines.length && re.test(lines[i])) { var li = el('li'); inlineMD(li, lines[i].replace(re, '')); list.appendChild(li); i++; }
+      box.appendChild(list); continue;
+    }
+    if (/^\s*\|.*\|\s*$/.test(ln) && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(lines[i + 1])) { // markdown table
+      var cells = function (r) { return r.trim().replace(/^\||\|$/g, '').split('|'); };
+      var tw = el('div', 'tablewrap'), tb = el('table'), thd = el('thead'), htr = el('tr');
+      cells(ln).forEach(function (c) { var th = el('th'); inlineMD(th, c.trim()); htr.appendChild(th); }); thd.appendChild(htr); tb.appendChild(thd);
+      var tbd = el('tbody'); i += 2;
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { var tr = el('tr'); cells(lines[i]).forEach(function (c) { var td = el('td'); inlineMD(td, c.trim()); tr.appendChild(td); }); tbd.appendChild(tr); i++; }
+      tb.appendChild(tbd); tw.appendChild(tb); box.appendChild(tw); continue;
+    }
+    var pb = [ln]; i++;
+    while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^\s*(```|#{1,4}\s|[-*•]\s|\d+[.)]\s|\u0001)/.test(lines[i])) { pb.push(lines[i]); i++; }
+    var p = el('p'); inlineMD(p, pb.join('\n')); box.appendChild(p);
+  }
+}
+
+/* ---------- microphone ---------- */
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+function attachMic(btn, area, setStatus, onFinal) {
+  var listening = false;
+  function set(on) { listening = on; btn.setAttribute('aria-pressed', String(on)); }
+  btn.addEventListener('click', function () {
+    if (listening && activeRec) { try { activeRec.stop(); } catch (e) {} return; }
+    if (!SR) { setStatus('This browser has no speech recognition. Typing works the same.'); return; }
+    stopSpeaking();
+    if (activeRec) { try { activeRec.abort(); } catch (e) {} }
+    var finalText = '', failed = false, rec;
+    try {
+      rec = new SR(); activeRec = rec; rec.lang = recLang; rec.interimResults = true; rec.continuous = false;
+      rec.onstart = function () { set(true); setStatus('Listening...'); };
+      rec.onresult = function (ev) {
+        var s = '';
+        for (var i = ev.resultIndex; i < ev.results.length; i++) { s += ev.results[i][0].transcript; if (ev.results[i].isFinal) finalText = (finalText + ' ' + ev.results[i][0].transcript).trim(); }
+        area.value = finalText || s;
+      };
+      rec.onerror = function (ev) {
+        failed = true; set(false); var c = ev && ev.error;
+        if (c === 'not-allowed' || c === 'service-not-allowed') setStatus('The microphone is blocked. Click the lock icon in the address bar, allow Microphone for this site, then try again. (It needs https:// or localhost, and Chrome, Edge or Safari.)');
+        else if (c === 'no-speech') setStatus('I did not hear anything. Press the mic and try again.');
+        else if (c === 'audio-capture') setStatus('No microphone was found.');
+        else if (c !== 'aborted') setStatus('Voice input stopped (' + (c || 'unknown') + '). You can type instead.');
+      };
+      rec.onend = function () { set(false); if (activeRec === rec) activeRec = null; if (finalText) { area.value = ''; setStatus(''); onFinal(finalText); } else if (!failed) setStatus(''); };
+      rec.start();
+    } catch (e) { set(false); setStatus('Voice input could not start here. You can type instead.'); }
+  });
+}
+
+/* ---------- chat component (Buddy and the two solvers) ---------- */
+var MIC_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+var PIC_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m21 16-5-5-8 8"/></svg>';
+function errCopy(code) {
+  if (code === 'no_key') return 'Study Buddy AI is not configured yet. The site owner must configure GEMINI_API_KEY or OPENROUTER_API_KEY in the server environment. Both have free-tier choices.';
+  if (code === 'bad_key') return 'The AI provider rejected the configured API key. The website owner needs to fix the server environment and check API billing.';
+  if (code === 'browser_ai_not_loaded') return 'Load the optional AI tutor at the top first. The first model download can be large.';
+  if (code === 'browser_ai_unsupported') return 'This device/browser cannot run the selected AI tutor. Try updated Chrome/Edge with WebGPU; the Instant Planner remains available.';
+  if (code === 'browser_ai_load_failed') return 'The browser AI could not load. Check internet, GPU memory and free storage; try the lightweight model.';
+  if (code === 'browser_ai_busy') return 'Browser AI is answering another question. Wait until it finishes.';
+  if (code === 'browser_ai_generation_failed') return 'Local AI could not generate a reply. Open Chrome Console for the real error, or try the smaller model.';
+  if (code === 'browser_ai_device_lost') return 'AI GPU session crashed. Close all Chrome windows, reopen Chrome and try the lightweight 360M model.';
+  if (code === 'network') return 'I cannot reach the Study Buddy server. Is it still running?';
+  if (code === 'no_credit') return 'The API account has no credit left. Add credit in the Anthropic console.';
+  if (code === 'research_daily_limit') return 'You have used today\'s Advanced Research questions. They reset at midnight UTC (5:30 AM India time). Standard mode still works.';
+  if (code === 'research_budget') return 'Advanced Research Mode has reached its daily limit for everyone. Standard mode still works; try research again tomorrow.';
+  if (code === 'timeout') return 'That took too long and was stopped. Try a smaller or simpler version of the problem.';
+  if (code === 'daily_limit') return 'You have used all of today\'s questions. They reset at midnight UTC (5:30 AM India time). Your plan and reminders still work.';
+  if (code === 'budget') return 'Study Buddy has reached its daily AI limit for everyone. Please try again tomorrow.';
+  if (code === 'busy') return 'Please wait for the current answer to finish first.';
+  if (code === 'ai_busy') return 'The AI service is busy right now. Wait a few seconds and try again.';
+  if (code === 'no_free_models' || code === 'free_model_required') return 'No verified free model is available. Add a Gemini or OpenRouter key and choose a free model; paid models are blocked.';
+  if (code === 'free_quota') return 'Your free AI quota is exhausted. Choose a different free model or try later. No paid fallback was used.';
+  if (code === 'free_tier_unavailable') return 'The selected Gemini model is not available on your free-tier account. Choose another free model.';
+  if (code === 'external_ai_disabled') return 'External AI is disabled for the safe local edition. Planner and UI preview still work; AI services require separate eligibility, privacy and provider-terms review.';
+  if (code === 'paid_provider_disabled') return 'Paid AI providers are disabled in zero-cost mode.';
+  if (code === 'bad_model') return 'This free model is unavailable for the configured account. Choose another model from the free model menu.';
+  if (code === 'bad_request' || code === 'forbidden') return 'That request was not accepted. Reload the page and try again.';
+  if (code === 'not_granted') return 'You did not allow this notebook to use Claude, so I cannot answer. Reload the page to be asked again.';
+  if (code === 'rate_limited') return 'That was too many requests too quickly. Wait a minute, then try again.';
+  if (code === 'sampling_disabled' || code === 'not_declared' || code === 'capability_disabled' || code === 'capability_removed') return 'Claude is not available for this account, so I cannot answer here.';
+  if (code === 'session_expired') return 'You are signed out. Reload the page to sign in again, then retry.';
+  if (code === 'invalid_json') return 'My answer came out garbled. Please ask again.';
+  if (code === 'image_rejected' || code === 'images_unavailable') return 'That photo could not be used. Try a smaller JPEG or PNG.';
+  if (code === 'refused') return 'I cannot help with that one. Try asking a different way.';
+  return 'Something went wrong on my side. Please try again.';
+}
+function createChat(cfg) {
+  var root = cfg.root; root.classList.add('chat', cfg.kind);
+  var log = el('div', 'log'); log.setAttribute('role', 'log'); if (cfg.kind === 'buddy') log.setAttribute('aria-live', 'polite');
+  var starters = el('div', 'starters');
+  var tray = el('div', 'tray'); tray.hidden = true;
+  var form = el('form', 'composer'); form.autocomplete = 'off';
+  var mic = el('button', 'ib'); mic.type = 'button'; mic.innerHTML = MIC_SVG; mic.setAttribute('aria-pressed', 'false'); mic.setAttribute('aria-label', 'Speak to ' + cfg.name);
+  var pic = null, file = null;
+  if (cfg.images) { pic = el('button', 'ib'); pic.type = 'button'; pic.innerHTML = PIC_SVG; pic.setAttribute('aria-label', 'Attach a photo of the question'); pic.hidden = true; file = el('input'); file.type = 'file'; file.accept = 'image/*'; file.hidden = true; }
+  var area = el('textarea'); area.rows = 1; area.placeholder = cfg.placeholder; area.setAttribute('aria-label', 'Message to ' + cfg.name); area.id = 'in-' + cfg.id;
+  var go = el('button', 'go', 'Send'); go.type = 'submit';
+  var stop = el('button', 'go', 'Stop'); stop.type = 'button'; stop.hidden = true;
+  form.appendChild(mic); if (pic) { form.appendChild(pic); form.appendChild(file); } form.appendChild(area); form.appendChild(go); form.appendChild(stop);
+  var opts = el('div', 'opts'), status = el('span', 'status'); status.setAttribute('role', 'status');
+  var think = null;
+  if (cfg.think !== undefined && !window.__SB_BROWSER_AI) {
+    var lab = el('label'); think = el('input'); think.type = 'checkbox'; think.checked = !!cfg.think; think.id = 'think-' + cfg.id;
+    lab.appendChild(think); lab.appendChild(document.createTextNode('Think harder (slower, more careful)')); opts.appendChild(lab);
+  }
+  var verify = null, research = null, usageEl = null, rhint = null, adv = !!(window.claude && window.claude.standalone);
+  function checkbox(id, label, on) { var l = el('label'); var c = el('input'); c.type = 'checkbox'; c.checked = !!on; c.id = id + '-' + cfg.id; l.appendChild(c); l.appendChild(document.createTextNode(label)); opts.appendChild(l); return c; }
+  if (cfg.verify && adv) verify = checkbox('verify', 'Check the maths with SymPy', cfg.verifyDefault);
+  if (cfg.research && adv) {
+    research = checkbox('research', 'Advanced Research Mode', false);
+    rhint = el('div', 'rhint', 'Strongest model, extended thinking and SymPy/NumPy checks, for graduate and research-level problems. Slow (often 1 to 5 minutes) and limited per day. It never invents proofs: open problems are labelled as open.'); rhint.hidden = true;
+    research.addEventListener('change', function () { rhint.hidden = !research.checked; if (think) think.disabled = research.checked; if (verify) verify.disabled = research.checked; });
+  }
+  if (cfg.usage && adv) usageEl = el('span', 'usage');
+  opts.appendChild(status); if (usageEl) opts.appendChild(usageEl);
+  root.appendChild(log); cfg.starters.forEach(function (s) { var b = el('button', null, s.label); b.type = 'button'; b.addEventListener('click', function () { area.value = s.text; area.focus(); fit(); }); starters.appendChild(b); });
+  root.appendChild(starters); root.appendChild(tray); root.appendChild(form); root.appendChild(opts); if (rhint) root.appendChild(rhint);
+
+  var turns = [], busy = false, ctl = null, pending = null, pendingURL = null;
+  function setStatus(m) { status.textContent = m || ''; }
+  function refreshUsage() {
+    if (!usageEl || !window.claude || !window.claude.usage) return;
+    window.claude.usage().then(function (u) { if (u) usageEl.textContent = 'Today: ' + u.units + '/' + u.unitsLimit + ' questions, research ' + u.research + '/' + u.researchLimit; }, function () {});
+  }
+  refreshUsage();
+  function fit() { area.style.height = 'auto'; area.style.height = Math.min(area.scrollHeight, 120) + 'px'; }
+  area.addEventListener('input', fit);
+  area.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit(); } });
+  function scroll() { log.scrollTop = log.scrollHeight; }
+  function addMsg(kind, text) { var m = el('div', 'msg ' + kind); if (text != null) m.textContent = text; log.appendChild(m); scroll(); return m; }
+  function setBusy(b) { busy = b; go.disabled = b; stop.hidden = !b; go.hidden = b; area.disabled = b; mic.disabled = b; if (pic) pic.disabled = b; }
+  function clearPending() { if (pendingURL) URL.revokeObjectURL(pendingURL); pending = null; pendingURL = null; tray.hidden = true; tray.textContent = ''; }
+  if (pic) {
+    pic.addEventListener('click', function () { file.click(); });
+    file.addEventListener('change', function () {
+      var f = file.files && file.files[0]; file.value = ''; if (!f) return;
+      var lim = imgLimits;
+      if (lim && lim.mediaTypes.indexOf(f.type) < 0) { setStatus('Use a JPEG, PNG, WebP or GIF photo.'); return; }
+      if (lim && f.size > lim.maxInputBytes) { setStatus('That photo is too large. Use a smaller one.'); return; }
+      clearPending(); pending = f; pendingURL = URL.createObjectURL(f);
+      var im = el('img'); im.src = pendingURL; im.alt = 'Attached photo'; var rm = el('button', 'linkish', 'Remove photo'); rm.type = 'button'; rm.addEventListener('click', clearPending);
+      tray.appendChild(im); tray.appendChild(rm); tray.hidden = false; setStatus('');
+    });
+  }
+  function ask(text, img) {
+    setBusy(true); setStatus('Connecting...');
+    sampleReady.then(function () { setBusy(false); setStatus(''); askNow(text, img); });
+  }
+  function askNow(text, img) {
+    if (!sampleFn) { addMsg('sys', cfg.name + ' cannot answer yet. ' + NO_AI_MSG); area.value = text; fit(); return; }
+    var userLine = text || '(see the attached photo)';
+    turns.push({ role: 'user', content: userLine });
+    setBusy(true); setStatus(''); ctl = new AbortController();
+    var payload = [{ role: 'user', content: cfg.system() }].concat(turns.slice(-12));
+    var isResearch = !!(research && research.checked);
+    var tier = think && think.checked && !isResearch ? 'complex' : 'default';
+    var o = { cache: false, signal: ctl.signal, modelTier: tier };
+    if (isResearch) o.mode = 'research'; else if (verify && verify.checked) o.verify = true;
+    if (img) o.images = img;
+    var node = addMsg('bot'); node.classList.add('thinking');
+    var finish = function () { setBusy(false); ctl = null; if (img) clearPending(); refreshUsage(); };
+    if (cfg.json) {
+      sampleFn.json(payload, o).then(function (data) {
+        node.remove(); var reply = data && typeof data.reply === 'string' && data.reply.trim() ? data.reply.trim() : 'Done.';
+        turns.push({ role: 'assistant', content: reply }); var res = cfg.onResult ? cfg.onResult(data) : null;
+        var m = addMsg('bot', reply); speak(reply); if (res) setStatus(res);
+      }, function (e) {
+        node.remove(); turns.pop();
+        if (e && e.code === 'cancelled') { setStatus('Stopped.'); area.value = text; fit(); return; }
+        if (e && e.code === 'invalid_json' && e.text && e.text.trim()) { turns.push({ role: 'assistant', content: e.text.trim() }); addMsg('bot', e.text.trim()); speak(e.text.trim()); setStatus('I could not update the plan this time. Ask again to change it.'); return; }
+        if (window.__SB_BROWSER_AI) console.error('[Study Buddy AI] Planner request error:', e);
+        addMsg('sys', errCopy(e && e.code)); area.value = text; fit();
+      }).then(finish);
+    } else {
+      var badge = el('div', 'mbadge'), body = el('div', 'mbody'), checks = el('div', 'mchecks'), notes = el('div', 'mnotes');
+      node.appendChild(badge); node.appendChild(body); node.appendChild(checks); node.appendChild(notes);
+      var latest = '', raf = 0;
+      function paint() { raf = 0; renderMD(body, latest); scroll(); }
+      o.onText = function (u) { node.classList.remove('thinking'); latest = u.text; if (!raf) raf = requestAnimationFrame(paint); }; // repaint at most once per frame: maths is heavier than text
+      o.onMeta = function (m) {
+        var label = m.mode === 'research' ? 'Advanced Research' : m.mode === 'think' ? 'Think harder' : 'Standard';
+        badge.textContent = label + ' · ' + m.model + (m.thinking ? ' · extended thinking' : '') + (m.tools ? ' · SymPy checks on' : (m.mode === 'research' ? ' · no checker' : ''));
+      };
+      o.onNote = function (t) { notes.appendChild(el('p', null, t)); };
+      o.onPhase = function (ph) { setStatus(ph === 'thinking' ? 'Thinking deeply. This can take a few minutes...' : ''); };
+      o.onTool = function (t) {
+        var row = checks.querySelector('[data-id="' + String(t.id).replace(/[^\w-]/g, '') + '"]');
+        if (!row) { row = el('div', 'chk run'); row.dataset.id = String(t.id).replace(/[^\w-]/g, ''); checks.appendChild(row); }
+        if (t.status === 'running') row.textContent = '… Checking with SymPy: ' + t.op + ' ' + (t.input || '');
+        else { row.className = 'chk ' + (!t.ok ? 'bad' : t.match === true ? 'good' : t.match === false ? 'fail' : 'info'); row.textContent = (!t.ok ? '⚠ ' : t.match === true ? '✓ ' : t.match === false ? '✗ ' : '• ') + t.text; }
+        scroll();
+      };
+      sampleFn(payload, o).then(function (r) {
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+        turns.push({ role: 'assistant', content: r.text }); renderMD(body, r.text); node.classList.remove('thinking'); setStatus('');
+        if (cfg.kind === 'solver' || cfg.kind === 'tutor') attachLearningFeedback(node);
+        if (r.truncated) setStatus('The answer was cut short. Ask me to continue.');
+      }, function (e) {
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+        var partial = e && e.text;
+        if (partial) { node.classList.remove('thinking'); renderMD(body, partial); turns.push({ role: 'assistant', content: partial }); }
+        else { node.remove(); turns.pop(); }
+        setStatus('');
+        if (e && e.code === 'cancelled') setStatus('Stopped.');
+        else { if (window.__SB_BROWSER_AI) console.error('[Study Buddy AI] Chat request error:', e); addMsg('sys', errCopy(e && e.code)); if (!partial) { area.value = text; fit(); } }
+      }).then(finish);
+    }
+  }
+  function send(text) {
+    text = (text || '').trim(); var img = pending; if ((!text && !img) || busy) return;
+    stopSpeaking();
+    var m = addMsg('me'); if (img && pendingURL) { var im = el('img'); im.src = pendingURL; im.alt = 'Your photo'; m.appendChild(im); } m.appendChild(document.createTextNode(text));
+    if (cfg.intercept && !img && cfg.intercept(text)) return;
+    if (window.SBStudyGuard && !window.SBStudyGuard.isStudyRequest(text, cfg.id, !!img)) {
+      var redirect = window.SBStudyGuard.redirect();
+      addMsg('bot', redirect);
+      speak(redirect);
+      setStatus('Study-only mode');
+      return;
+    }
+    ask(text, img);
+  }
+  form.addEventListener('submit', function (e) { e.preventDefault(); var v = area.value; area.value = ''; fit(); send(v); });
+  stop.addEventListener('click', function () { if (ctl) ctl.abort(); });
+  attachMic(mic, area, setStatus, send);
+  var firstMsg = addMsg('bot'); renderMD(firstMsg, cfg.welcome);
+  return { send: send, say: function (t) { var m = addMsg('bot', t); speak(t); return m; }, sys: function (t) { addMsg('sys', t); }, setStatus: setStatus, enableImages: function () { if (pic) pic.hidden = false; } };
+}
+/* ---------- Study Flow & Notification Centre ---------- */
+var lastFocus = null;
+function openOverlay(id) {
+  var o = $('#' + id); if (!o) return;
+  lastFocus = document.activeElement;
+  o.hidden = false;
+  if (id === 'notifyOverlay') {
+    state.reminders.forEach(function (r) { if (r.fired && !r.done) r.seen = true; });
+    scheduleSave(); renderAlarm(); renderBell();
+  }
+  if (id === 'studyOverlay') renderStudy();
+  else renderNotificationList();
+  $('.sb-dialog', o).focus();
+}
+function closeOverlay(id) {
+  $('#' + id).hidden = true;
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+$('#studyOpen').addEventListener('click', function () { openOverlay('studyOverlay'); });
+$('#plannerEditBtn').addEventListener('click', function () { openOverlay('studyOverlay'); });
+$('#speakTodayBtn').addEventListener('click', speakTodayTasks);
+$('#speakPlanBtn').addEventListener('click', speakAllPendingTasks);
+$('#stopPlannerVoiceBtn').addEventListener('click', function () { stopSpeaking(); setPlannerStatus('Voice stopped.'); });
+$('#notifyOpen').addEventListener('click', function () { openOverlay('notifyOverlay'); });
+$$('[data-close]').forEach(function (b) { b.addEventListener('click', function () { closeOverlay(b.dataset.close); }); });
+$$('.sb-overlay').forEach(function (o) { o.addEventListener('click', function (e) { if (e.target === o) closeOverlay(o.id); }); });
+document.addEventListener('keydown', function (e) {
+  var o = !$('#studyOverlay').hidden ? $('#studyOverlay') : !$('#notifyOverlay').hidden ? $('#notifyOverlay') : null;
+  if (!o) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeOverlay(o.id); }
+  // Keep keyboard focus in modal: background notebook remains visually available but not interactive via Tab.
+  if (e.key === 'Tab') {
+    var nodes = $$('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled)', o).filter(function (n) { return n.offsetParent !== null; });
+    if (!nodes.length) return;
+    var first = nodes[0], last = nodes[nodes.length - 1];
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === $('.sb-dialog', o))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
+function sbButton(label, handler, className) {
+  var b = el('button', className || 'sb-mini-btn', label); b.type = 'button'; b.addEventListener('click', handler); return b;
+}
+function sbNote(text) { return el('p', 'sb-status', text); }
+function daysCaption(n) { return n === 0 ? 'Today!' : n === 1 ? 'Tomorrow' : 'In ' + n + ' days'; }
+function examDetails(e) {
+  var left = window.SBStudyEngine.daysUntil(e.date, Date.now());
+  return Number.isFinite(left) ? (left < 0 ? 'Exam date passed' : daysCaption(left)) : 'No valid exam date';
+}
+function updateStudy() { scheduleSave(); renderStudy(); }
+function renderStudy() {
+  var exams = $('#studyExams'), summary = $('#studySummary');
+  if (!exams || !summary) return;
+  exams.textContent = ''; summary.textContent = '';
+  var rec = window.SBStudyEngine.recommend(state.study.exams, Date.now());
+  if (rec) {
+    var card = el('section', 'sb-rec');
+    card.appendChild(el('h3', null, '✏️ Today: ' + rec.topic.name));
+    card.appendChild(el('p', null, rec.exam.subject + ' · ' + examDetails(rec.exam)));
+    card.appendChild(el('p', null, 'Try ' + rec.questions + ' practice questions for ' + rec.minutes + ' minutes. This is based on your self-rated confidence, not a tested mastery score.'));
+    var bar = el('div', 'sb-actions');
+    bar.appendChild(sbButton('＋ Add to my plan', function () {
+      if (state.plan.example) state.plan = { title: 'My study plan', tips: '', days: [] };
+      var day = state.plan.days.find(function (d) { return d.label === 'Today'; });
+      if (!day && state.plan.days.length >= 14) { alert('Plan is full (14 days). Use an existing day first.'); return; }
+      if (!day) { day = { label: 'Today', tasks: [] }; state.plan.days.unshift(day); }
+      if (day.tasks.some(function (t) { return t.text === 'Practise ' + rec.topic.name && t.subject === rec.exam.subject; })) { alert('This session is already on your Today plan.'); return; }
+      if (day.tasks.length >= 10 || state.plan.days.length > 14) { alert('Today has reached the plan limit; finish a task first.'); return; }
+      day.tasks.push(newTask(rec.exam.subject, 'Practise ' + rec.topic.name, rec.minutes, false));
+      scheduleSave(); renderAll(); alert('Added to your plan!');
+    }));
+    bar.appendChild(sbButton('🔔 Remind in 30 min', function () {
+      if (state.reminders.length >= 40) { alert('Reminder limit reached.'); return; }
+      addReminder('Revise ' + rec.topic.name + ' (' + rec.exam.subject + ')', Date.now() + 30 * 60000, 'none');
+      alert('Reminder added. It will ring while the website is open; use Add to calendar for device alerts when closed.');
+    }));
+    card.appendChild(bar); summary.appendChild(card);
+  } else summary.appendChild(el('p', 'sb-empty', 'Add an upcoming exam and topics to receive a study recommendation.'));
+  state.study.exams.forEach(function (e) {
+    var box = el('section', 'sb-exam');
+    box.appendChild(el('h3', null, e.subject));
+    box.appendChild(sbNote('Exam: ' + e.date + ' · ' + examDetails(e)));
+    e.topics.forEach(function (t) {
+      var row = el('div', 'sb-topic'); row.appendChild(el('span', null, t.name));
+      var controls = el('div', 'sb-actions');
+      var sel = el('select'); sel.setAttribute('aria-label', 'How well do you understand ' + t.name);
+      ['Not started', 'Struggled', 'Practising', 'Confident'].forEach(function (label, i) {
+        var option = el('option', null, label); option.value = String(i); sel.appendChild(option);
+      });
+      sel.value = String(t.confidence || 0);
+      sel.addEventListener('change', function () { t.confidence = Number(sel.value); t.lastPracticed = Date.now(); updateStudy(); });
+      controls.appendChild(sel);
+      controls.appendChild(sbButton('×', function () {
+        e.topics.splice(e.topics.indexOf(t), 1); updateStudy();
+      }));
+      row.appendChild(controls); box.appendChild(row);
+    });
+    var acts = el('div', 'sb-actions'); acts.appendChild(sbButton('Remove exam', function () {
+      if (window.confirm('Remove ' + e.subject + ' and its topic ratings?')) { state.study.exams.splice(state.study.exams.indexOf(e), 1); updateStudy(); }
+    }));
+    box.appendChild(acts); exams.appendChild(box);
+  });
+}
+$('#examForm').addEventListener('submit', function (event) {
+  event.preventDefault();
+  if (state.study.exams.length >= 8) { alert('You can currently track up to 8 exams.'); return; }
+  var subject = $('#examSubject').value.replace(/\s+/g, ' ').trim().slice(0, 60);
+  var date = $('#examDate').value;
+  var topics = $('#examTopics').value.split(/[,\n]+/).map(function (s) { return s.trim().slice(0, 80); }).filter(Boolean).slice(0, 40);
+  if (!topics.length) topics = ['Core concepts', 'Practice questions', 'Revision and self-test'];
+  if (!subject || !date) return;
+  if (window.SBStudyGuard && !window.SBStudyGuard.isAcademicSubject(subject)) {
+    $('#planGenerationStatus').textContent = 'Please enter an academic subject (for example, Maths, Physics, English, Programming, or Engineering). Study Buddy plans revision for learning subjects only.';
+    $('#examSubject').focus();
+    return;
+  }
+  if (new Date(date + 'T23:59:59').getTime() < Date.now()) { alert('Choose a future exam date.'); return; }
+  state.study.exams.push({ id: uid('ex'), subject: subject, date: date, topics: topics.map(function (s) { return { id: uid('tp'), name: s, confidence: 0, lastPracticed: 0 }; }) });
+  this.reset(); updateStudy();
+});
+
+/* Instant, deterministic planner. Planning never calls the browser AI model. */
+function createInstantPlan(options) {
+  options = options || {};
+  var invalidExam = state.study.exams.find(function (exam) { return window.SBStudyGuard && !window.SBStudyGuard.isAcademicSubject(exam.subject); });
+  if (invalidExam) {
+    var guardStatus = $('#planGenerationStatus');
+    if (guardStatus) guardStatus.textContent = 'Your saved exam list includes a non-academic subject (“' + String(invalidExam.subject || '').slice(0, 60) + '”). Remove or rename it to a study subject before generating a plan.';
+    if (!options.fromChat) $('#examSubject').focus();
+    return false;
+  }
+  var hours = Number($('#dailyStudyHours').value);
+  var result = window.SBInstantPlanner.generate(state.study.exams, hours, Date.now());
+  var status = $('#planGenerationStatus');
+  if (result.error) {
+    if (status) status.textContent = result.error;
+    if (!options.fromChat) $('#examSubject').focus();
+    return false;
+  }
+  if (!state.plan.example && !options.skipConfirm && !window.confirm('Replace your current plan with a new instant plan? Completed tasks with matching names will stay completed.')) return { cancelled: true };
+  var next = normalizePlan(result.plan, state.plan.example ? null : state.plan);
+  if (!next) {
+    if (status) status.textContent = 'The planner could not build a valid schedule. Check your exam dates.';
+    return false;
+  }
+  state.plan = next;
+  scheduleSave();
+  renderAll();
+  closeOverlay('studyOverlay');
+  if (typeof showPlannerPage === 'function') showPlannerPage();
+  if (status) status.textContent = 'Plan ready. Review and speak your tasks on page 2.';
+  return result;
+}
+$('#freePlanBtn').addEventListener('click', function () {
+  var result = createInstantPlan();
+  if (result && result.stats) {
+    var msg = 'Instant plan ready: ' + result.stats.tasks + ' tasks across ' + result.stats.days + ' days, with a daily cap of ' + result.stats.dailyBudgetMinutes + ' minutes.';
+    if (result.warnings && result.warnings.length) msg += ' ' + result.warnings.join(' ');
+    $('#planGenerationStatus').textContent = msg;
+    setPlannerStatus(msg + ' Your tasks are on page 2.');
+  }
+});
+
+/* Notifications: browser sound/OS notifications only while app open.
+ * For closed-page alerts use calendar export; no unverified push claim. */
+function withinQuietHours() {
+  var d = new Date(), t = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  var start = state.notify.quietStart, end = state.notify.quietEnd;
+  if (!start || !end || start === end) return false;
+  return start < end ? t >= start && t < end : t >= start || t < end;
+}
+function renderBell() {
+  var unread = state.reminders.filter(function (r) { return !r.done && r.fired && !r.seen; }).length;
+  var count = $('#notifyCount'); if (count) count.textContent = String(unread);
+  $('#notifyOpen').setAttribute('aria-label', unread + ' unread study reminders. Open notifications');
+  if (!$('#notifyOverlay').hidden) renderNotificationList();
+}
+function renderNotificationList() {
+  var list = $('#notifyList'); if (!list) return;
+  list.textContent = '';
+  var pending = state.reminders.filter(function (r) { return !r.done; }).sort(function (a,b) { return a.at - b.at; });
+  if (!pending.length) list.appendChild(el('p', 'sb-empty', 'No active reminders. You can add them on notebook page 4.'));
+  pending.slice(0, 25).forEach(function (r) {
+    var card = el('div', 'sb-notice' + (r.at <= Date.now() ? ' overdue' : ''));
+    card.appendChild(el('b', null, r.text));
+    card.appendChild(sbNote(fmtWhen(r.at) + (r.at <= Date.now() ? ' · Due / overdue' : '') + (r.repeat !== 'none' ? ' · ' + r.repeat : '')));
+    var acts = el('div', 'sb-actions');
+    acts.appendChild(sbButton('Done', function () { finishReminder(r); }));
+    [10, 30, 60].forEach(function (m) { acts.appendChild(sbButton('Snooze ' + m + 'm', function () { snooze(r, m); })); });
+    acts.appendChild(sbButton('Dismiss', function () { r.seen = true; r.fired = true; scheduleSave(); renderAlarm(); renderBell(); }));
+    card.appendChild(acts); list.appendChild(card);
+  });
+  $('#notifySound').checked = !!state.notify.sound;
+  $('#quietStart').value = state.notify.quietStart;
+  $('#quietEnd').value = state.notify.quietEnd;
+  $('#notifyHelp').textContent = 'Reminders work while this page is open. Closed-browser push is not implemented. For reliable device alerts, export a calendar event.';
+}
+$('#notifySound').addEventListener('change', function () { state.notify.sound = this.checked; scheduleSave(); if (this.checked && !withinQuietHours()) beep(); });
+['quietStart', 'quietEnd'].forEach(function (id) { $('#' + id).addEventListener('change', function () { state.notify[id] = this.value; scheduleSave(); }); });
+$('#notifyEnable').addEventListener('click', function () {
+  askNotify().then(function (permission) {
+    $('#notifyHelp').textContent = permission === 'granted' ? 'Browser alerts enabled while Study Buddy is open. Closed-browser notifications are not available yet.' : permission === 'denied' ? 'Notifications blocked in browser settings. In-app alerts still work.' : 'Browser notifications unavailable or not enabled.';
+  }).catch(function () { $('#notifyHelp').textContent = 'Could not enable notifications.'; });
+});
+$('#notifyGoRem').addEventListener('click', function () { closeOverlay('notifyOverlay'); if (typeof goSection === 'function') goSection(1); });
+
+/* Tutor → Study Flow integration: students consciously rate understanding after a solution. */
+function attachLearningFeedback(node) {
+  if (!node || !state.study || !state.study.exams.length) return;
+  var topics = [];
+  state.study.exams.forEach(function (exam) { exam.topics.forEach(function (topic) { topics.push({ exam: exam, topic: topic }); }); });
+  if (!topics.length) return;
+  var footer = el('div', 'sb-chat-feedback');
+  footer.appendChild(el('span', null, 'How well did you understand this?'));
+  var select = el('select'); select.setAttribute('aria-label', 'Topic to update after this answer');
+  topics.forEach(function (entry, i) { var option = el('option', null, entry.exam.subject + ' — ' + entry.topic.name); option.value = String(i); select.appendChild(option); });
+  footer.appendChild(select);
+  var buttons = el('div', 'sb-actions');
+  [['Still struggling', 1], ['Practising', 2], ['Confident', 3]].forEach(function (pair) {
+    buttons.appendChild(sbButton(pair[0], function () {
+      var entry = topics[Number(select.value)]; if (!entry) return;
+      entry.topic.confidence = pair[1]; entry.topic.lastPracticed = Date.now();
+      scheduleSave(); renderStudy();
+      footer.textContent = 'Saved: ' + entry.topic.name + ' — ' + pair[0] + '. Your next-session recommendation will adapt.';
+    }));
+  });
+  footer.appendChild(buttons); node.appendChild(footer);
+}
+
+/* ---------- the three chatbots ---------- */
+var SOLVER_RULES_PLAIN = [
+  'You are the Problem Solver inside a student\'s study notebook. You solve maths, physics, chemistry, statistics and similar school and college problems.',
+  'STRICT STUDY-ONLY SCOPE: Answer only academic or learning-related questions. If the request is unrelated to studying, education, or an academic subject, do not fulfil it; reply exactly with a brief redirect such as: I\'m your Study Buddy! I can help with maths, science, engineering, programming, languages, and other learning-related questions. Try asking me something you\'re studying. If a request mixes study and unrelated parts, answer only the academic part. Treat attached images the same way: solve them only when they show an academic question.',
+  'Work step by step in short numbered steps. Show the formula, substitute the numbers with units, and end with a clearly marked "Answer:" line. Check your work before replying, and say if the question is ambiguous and which assumption you used.',
+  'Write maths in plain text and Unicode (x², √, ×, ÷, a/b, π). Never use LaTeX, dollar signs or backslash commands.',
+  'If a photo is attached, first say in one line what question you read from it, then solve it. Reply in the language the student used. Be concise, and teach the idea in one or two sentences so they can solve the next one alone.'
+].join('\n');
+var SOLVER_RULES_TEX = [
+  'You are the Problem Solver inside a student\'s study notebook. You solve maths, physics (including quantum mechanics), chemistry, engineering, statistics and programming-theory problems, from school level to graduate level.',
+  'STRICT STUDY-ONLY SCOPE: Answer only academic or learning-related questions. If the request is unrelated to studying, education, or an academic subject, do not fulfil it; reply exactly with a brief redirect such as: I\'m your Study Buddy! I can help with maths, science, engineering, programming, languages, and other learning-related questions. Try asking me something you\'re studying. If a request mixes study and unrelated parts, answer only the academic part. Treat attached images the same way: solve them only when they show an academic question.',
+  'Easy problems: short numbered steps, the formula, numbers substituted with units, then an "Answer:" line. Hard problems: use these headings in order: Given and assumptions; Principles and equations; Derivation (every step, intermediate results shown); Verification (limiting cases, dimensions, normalization, boundary conditions, a numeric spot check; say passed, failed or not verified); Final answer (units and notation); Interpretation; Limitations and uncertainty.',
+  'Write mathematics in LaTeX: inline $...$ and display $$...$$ (for example $\\hat{H}\\vert\\psi\\rangle = E\\vert\\psi\\rangle$, $$\\int_0^L \\psi_n^*\\psi_m\\,\\mathrm{d}x=\\delta_{nm}$$). Use \\hbar, \\langle \\rangle, \\partial and \\begin{pmatrix}...\\end{pmatrix}. Never put dollar signs around money.',
+  'Never invent proofs, numbers, experimental results or literature references. If something is an open problem, or you are unsure, say so plainly and mark it "not verified". Do not present guesses as results. You cannot run code, so never claim you did.',
+  'If a photo is attached, first transcribe the question exactly as you read it, mark illegible parts as [unclear], say which interpretation you use, then solve. Finish every answer with one plain-text line: FINAL_ANSWER: <result with units>. Reply in the language the student used.'
+].join('\n');
+function solverRules() { return window.claude && window.claude.standalone ? SOLVER_RULES_TEX : SOLVER_RULES_PLAIN; }
+var TUTOR_RULES = [
+  'You are the Code and Concepts Tutor inside a student\'s study notebook. You help with Python, JavaScript, HTML and CSS, data structures and algorithms, databases, AI and ML basics, academic concepts, and school/college writing.',
+  'STRICT STUDY-ONLY SCOPE: Answer only academic or learning-related questions, including learning to code and understanding concepts. If the request is unrelated to learning or an academic subject, do not fulfil it; reply briefly with: I\'m your Study Buddy! I can help with maths, science, engineering, programming, languages, and other learning-related questions. Try asking me something you\'re studying. If a request mixes study and unrelated parts, answer only the academic part.',
+  'Explain the idea first in plain words, then show working, well-commented code in fenced blocks with the language name. For algorithms give the time and space complexity. When code has a bug, point to the exact line and explain why.',
+  'For homework-style questions, teach so the student can do the next one themselves, but do give the full answer when they ask for it. Reply in the language the student used. Write maths in plain text, never LaTeX. Keep answers focused and not longer than needed.'
+].join('\n');
+
+var solver, tutor;
+function buildChats() {
+  solver = createChat({
+    root: $('#chatSolver'), id: 'solver', kind: 'solver', name: 'Problem Solver', placeholder: 'Type a problem or add a photo', think: false, images: true, verify: true, verifyDefault: true, research: true, usage: true,
+    system: solverRules,
+    welcome: 'Send me a **maths, physics (quantum mechanics too), chemistry or engineering** problem, from school to graduate level. I solve it step by step, render the equations, and (with the checkbox on) check the maths with SymPy. You can also attach a photo of a handwritten question. For the hardest problems tick **Advanced Research Mode**.',
+    starters: [
+      { label: 'Projectile example', text: 'A ball is thrown at 20 m/s at 30 degrees above the horizontal. Find the time of flight and the range.' },
+      { label: 'Integral example', text: 'Evaluate the integral of x * e^(x^2) dx from 0 to 1.' },
+      { label: 'Mole example', text: 'How many grams of CO2 form when 12 g of carbon burns completely in oxygen?' },
+      { label: 'Particle in a box', text: 'An electron is in the n = 2 state of an infinite square well of width L = 1 nm. Find its energy in eV, normalize the wavefunction, and compute the probability of finding it in the left quarter of the well.' },
+      { label: 'Ladder operators', text: 'For the quantum harmonic oscillator, derive [a, a†] = 1 from [x, p] = iħ and compute <x²> and <p²> in the state |n>. Verify the uncertainty product.' },
+      { label: 'Perturbation theory', text: 'An infinite square well of width L gets the perturbation V = λ δ(x − L/2). Find the first-order energy shift of every level and explain why even levels do not shift.' },
+      { label: 'Bell / CHSH', text: 'For the singlet state, find measurement angles that maximise the CHSH quantity and show the value 2√2 exceeds the classical bound 2.' }
+    ]
+  });
+  tutor = createChat({
+    root: $('#chatTutor'), id: 'tutor', kind: 'solver', name: 'Code and Concepts Tutor', placeholder: 'Ask about code or a concept', think: false,
+    system: function () { return TUTOR_RULES; },
+    welcome: 'Ask me about **Python, web development, algorithms** or any concept you are stuck on. I explain the idea first, then show code.',
+    starters: [
+      { label: 'Binary search', text: 'Explain binary search in Python and its time complexity.' },
+      { label: 'Fix my bug', text: 'Why does this give an error?\n\nfor i in range(5)\n    print(i)' },
+      { label: 'CSS flexbox', text: 'Explain CSS flexbox with a small example for a navbar.' }
+    ]
+  });
+}
+
+/* ---------- voice commands (instant, no AI) ---------- */
+function parseClock(h, m, ap) {
+  h = Number(h); m = Number(m || 0);
+  if (ap === 'pm' && h < 12) h += 12; if (ap === 'am' && h === 12) h = 0;
+  var d = new Date(); d.setHours(h, m, 0, 0); if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1); return d.getTime();
+}
+function tryInstantPlanRequest(text) {
+  var original = String(text || '').trim();
+  var t = original.toLowerCase().replace(/[.,!?]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!t || /^remind me\b/.test(t)) return false;
+  if (/^(show|open|go to|read|tell me|what is|what s|explain|define).{0,45}\bplan\b/.test(t) || /\b(read|speak|sunao|padho|bolo|batao)\b.*\bplan\b/.test(t)) return false;
+  var planIntent = /\b(plan my exam weeks|weekend revision|make it lighter|study plan|revision plan|exam plan|study schedule|timetable)\b/.test(t) ||
+    /\b(?:make|create|generate|build|prepare)\b.{0,45}\b(?:plan|schedule|timetable|revision)\b/.test(t) ||
+    /\bi have exams?\b.{0,160}\b\d+(?:\.\d+)?\s*(?:hours?|hrs?|minutes?|mins?)\b/.test(t);
+  if (!planIntent) return false;
+
+  var hourMatch = t.match(/\b(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\s*(?:a|per|each)\s*day\b/);
+  var minuteMatch = t.match(/\b(\d+(?:\.\d+)?)\s*(?:minutes?|mins?)\s*(?:a|per|each)\s*day\b/);
+  var hours = hourMatch ? Number(hourMatch[1]) : minuteMatch ? Number(minuteMatch[1]) / 60 : null;
+  var lighterIntent = /\b(make it lighter|less time|reduce my plan|lighter plan)\b/.test(t);
+  if (hours !== null && hours >= 0.5 && hours <= 10) $('#dailyStudyHours').value = String(Math.round(hours * 2) / 2);
+  else if (lighterIntent) { var currentHours = Number($('#dailyStudyHours').value) || 2; $('#dailyStudyHours').value = String(Math.max(0.5, Math.round(currentHours * 0.5 * 2) / 2)); }
+
+  var hasUpcomingExam = state.study.exams.some(function (exam) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(exam.date || '')) && new Date(exam.date + 'T23:59:59').getTime() >= Date.now();
+  });
+  var namesNewSubjects = /\bexams?\s*(?:in|on|:)|\bsubjects?:|\bplan for\b|\brevision plan for\b/.test(t);
+  var upcoming = state.study.exams.filter(function (exam) { return /^\d{4}-\d{2}-\d{2}$/.test(String(exam.date || '')) && new Date(exam.date + 'T23:59:59').getTime() >= Date.now(); });
+  var allSavedSubjectsMentioned = upcoming.length > 0 && upcoming.every(function (exam) { return exam.subject && t.indexOf(String(exam.subject).toLowerCase()) >= 0; });
+  if (hasUpcomingExam && (!namesNewSubjects || allSavedSubjectsMentioned)) {
+    var result = createInstantPlan({ fromChat: true });
+    if (result && result.cancelled) speakBot('No problem. I left your existing plan unchanged.');
+    else if (result && result.plan) speakBot('Done. Your instant plan is ready on page 2.');
+    else speakBot('Open the Instant Planner to add your subjects and exam dates.');
+  } else {
+    openOverlay('studyOverlay');
+    $('#planGenerationStatus').textContent = 'Add each subject and its exact exam date, then press Generate instant plan. Topics are optional.';
+    window.setTimeout(function () { var subject = $('#examSubject'); if (subject) subject.focus(); }, 0);
+  }
+  return true;
+}
+function tryCommand(text) {
+  if (tryInstantPlanRequest(text)) return true;
+  var t = text.toLowerCase().replace(/[.,!?]/g, ' ').replace(/\s+/g, ' ').trim(), words = t ? t.split(' ') : [];
+  var rm = t.match(/^remind me (?:in (\d+)\s*(min|mins|minute|minutes|hour|hours|hr|hrs)|at (\d{1,2})(?::(\d{2}))?\s*(am|pm)?)\s*(?:to |about |for )?(.+)$/);
+  if (rm && words.length <= 16) {
+    var at = rm[1] ? Date.now() + Number(rm[1]) * (/^h/.test(rm[2]) ? 3600000 : 60000) : parseClock(rm[3], rm[4], rm[5]);
+    if (addReminder(rm[6], at)) { speakBot('Done. I will remind you ' + fmtRel(at) + ' to ' + rm[6] + '. It is on page 4.'); return true; }
+  }
+  if (words.length > 7) return false;
+  if (/^(stop|ruko|ruk jao|chup|quiet|band karo|be quiet)$/.test(t)) { stopSpeaking(); setPlannerStatus('Voice stopped.'); return true; }
+  var th = t.match(/\b(dark|light)\s*(mode|theme)\b/);
+  if (th) { setTheme(th[1]); speakBot(th[1] === 'dark' ? 'Dark mode on.' : 'Light mode on.'); return true; }
+  if (/^(turn|flip) (the |a )?page$|^next page$|^page palto$|^agla page$/.test(t)) { turn(1); return true; }
+  if (/^(previous|prev|last) page$|^go back$|^pichla page$|^peeche jao$/.test(t)) { turn(-1); return true; }
+  if (/^(show |open |go to )?(my )?(progress|pie chart|chart|reminders?)( dikhao| dikhana)?$/.test(t)) { goSection(1); speakBot(/remind/.test(t) ? 'Here are your reminders.' : 'Here is your progress.'); return true; }
+  if (/^(show |open |go to )?(the )?(problem )?(solver|tutor)( dikhao)?$/.test(t)) { goSection(2); return true; }
+  if (/^(open|show|go to) (the )?(instant )?planner$/.test(t)) { showPlannerPage(); openOverlay('studyOverlay'); return true; }
+  if (/^(read|speak|sunao|padho) (today'?s )?tasks$/.test(t)) { speakTodayTasks(); return true; }
+  if (/^(read|speak|sunao|padho) (all|full|upcoming) (pending )?tasks$/.test(t)) { speakAllPendingTasks(); return true; }
+  if (/^(show |open |go to )(my )?plan$|^plan dikhao$/.test(t)) { showPlannerPage(); return true; }
+  if (/(read|speak|tell|sunao|padho|bolo|batao).*\bplan\b|\bplan\b.*(read|sunao|padho|bolo|batao)/.test(t)) {
+    if (state.plan.example) { speakBot('You have no plan yet. Tell me your subjects, exam dates and hours a day.'); return true; }
+    var n = nextTask(); if (!n) { speakBot('All tasks are done. Nice work.'); return true; }
+    var parts = n.day.tasks.filter(function (x) { return !x.done; }).map(function (x) { return x.subject + (x.text ? ', ' + x.text : '') + ', ' + x.mins + ' minutes'; });
+    speakBot(n.day.label + '. ' + parts.length + ' task' + (parts.length > 1 ? 's' : '') + ' left. ' + parts.join('. Then ') + '.'); return true;
+  }
+  if (/^(what'?s |what is |show )?(the )?(next|agla|aage)( task| kya| kya hai)?( is)?$/.test(t) || /^(next task|agla kya hai|agla task|what next|what should i do)$/.test(t)) {
+    var nx = nextTask(); speakBot(nx ? 'Next: ' + nx.task.subject + (nx.task.text ? ', ' + nx.task.text : '') + '. About ' + nx.task.mins + ' minutes.' : 'Everything is done. Nice work.'); return true;
+  }
+  var m = t.match(/^(?:mark\s+)?(.*?)\s*(?:as\s+)?(?:done|complete|completed|ho gaya|ho gya|khatam)$/);
+  if (m) {
+    var subj = (m[1] || '').replace(/\b(the|my|task|it|this|that|ka|ki)\b/g, '').replace(/\s+/g, ' ').trim(), found = null, list = allTasks();
+    for (var i = 0; i < list.length && !found; i++) { var x = list[i]; if (x.task.done) continue; var s = x.task.subject.toLowerCase(); if (!subj || s.indexOf(subj) >= 0 || subj.indexOf(s) >= 0) found = x; }
+    if (found) { found.task.done = true; touch(); renderPlan(); speakBot('Done: ' + found.task.subject + '. ' + (nextTask() ? 'Keep going.' : 'That was the last one.')); return true; }
+    if (subj) return false;
+    speakBot('There is no open task left.'); return true;
+  }
+  return false;
+}
+
+/* ---------- the notebook: page turning ---------- */
+var book = $('#book'), cover = $('#cover'), pages = {}, leaves = [], mode = null, spread = 0, pidx = 0;
+for (var pi = 1; pi <= 6; pi++) pages[pi] = $('#pg' + pi);
+var mq = window.matchMedia('(max-width: 860px)'), TURN_MS = reduce ? 0 : 950;
+function finalZ(lf, i) { lf.style.zIndex = lf.classList.contains('flipped') ? 10 + i : 10 - i; }
+function mkLeaf(front, back) {
+  var lf = el('div', 'leaf'), f = el('div', 'face front'), b = el('div', 'face back');
+  f.appendChild(front); b.appendChild(back); lf.appendChild(f); lf.appendChild(b); book.appendChild(lf); return lf;
+}
+function build() {
+  var nm = mq.matches ? 'narrow' : 'wide'; if (nm === mode) return;
+  if (mode === 'wide') pidx = spread * 2; else if (mode === 'narrow') spread = Math.floor(pidx / 2);
+  mode = nm; book.textContent = ''; leaves = []; book.className = 'book ' + mode;
+  if (mode === 'wide') {
+    var l = el('div', 'half l'), r = el('div', 'half r'); l.appendChild(pages[1]); r.appendChild(pages[6]); book.appendChild(l); book.appendChild(r);
+    leaves = [mkLeaf(pages[2], pages[3]), mkLeaf(pages[4], pages[5])];
+    leaves.forEach(function (lf, i) { lf.classList.toggle('flipped', i < spread); finalZ(lf, i); });
+    for (var i = 1; i <= 6; i++) pages[i].classList.remove('active');
+  } else { for (var j = 1; j <= 6; j++) { book.appendChild(pages[j]); pages[j].classList.toggle('active', j - 1 === pidx); } }
+  sync();
+}
+function sync() {
+  for (var i = 1; i <= 6; i++) {
+    var vis = mode === 'wide' ? (i === spread * 2 + 1 || i === spread * 2 + 2) : (i - 1 === pidx);
+    pages[i].inert = !vis;
+  }
+  var cur = mode === 'wide' ? spread : Math.floor(pidx / 2), last = mode === 'wide' ? 2 : 5, pos = mode === 'wide' ? spread : pidx;
+  $('#prev').disabled = pos <= 0; $('#next').disabled = pos >= last;
+  $('#where').textContent = mode === 'wide' ? 'Pages ' + (spread * 2 + 1) + ' and ' + (spread * 2 + 2) + ' of 6' : 'Page ' + (pidx + 1) + ' of 6';
+  $$('.tab').forEach(function (t, k) { t.setAttribute('aria-current', String(k === cur)); });
+}
+function goSpread(n) {
+  n = clamp(n, 0, 2); if (n === spread) return;
+  var from = spread; spread = n;
+  var changing = []; leaves.forEach(function (lf, i) { if (lf.classList.contains('flipped') !== (i < spread)) changing.push(i); });
+  if (n < from) changing.reverse();
+  changing.forEach(function (i, k) {
+    var lf = leaves[i]; lf.style.zIndex = 60 + k;
+    setTimeout(function () { lf.classList.add('turning'); lf.classList.toggle('flipped', i < spread); }, k * 180);
+    setTimeout(function () { lf.classList.remove('turning'); finalZ(lf, i); }, k * 180 + TURN_MS + 60);
+  });
+  if (n === 1) setTimeout(function () { animatePie(0); }, reduce ? 0 : 520);
+  sync();
+}
+function goPage(n) {
+  n = clamp(n, 0, 5); if (n === pidx) return;
+  var dir = n > pidx ? 'in-fwd' : 'in-back'; pidx = n;
+  for (var i = 1; i <= 6; i++) { pages[i].classList.remove('in-fwd', 'in-back'); pages[i].classList.toggle('active', i - 1 === pidx); }
+  pages[pidx + 1].classList.add(dir); sync();
+  if (pidx === 2) animatePie(0);
+  var b = $('.pb', pages[pidx + 1]); if (b) b.scrollTop = 0;
+}
+function turn(d) { if (mode === 'wide') goSpread(spread + d); else goPage(pidx + d); }
+function goSection(k) { if (mode === 'wide') goSpread(k); else goPage(k * 2); }
+$('#prev').addEventListener('click', function () { turn(-1); });
+$('#next').addEventListener('click', function () { turn(1); });
+$$('.tab').forEach(function (t) { t.addEventListener('click', function () { goSection(Number(t.dataset.go)); }); });
+Object.keys(pages).forEach(function (k) { $$('.turn-btn', pages[k]).forEach(function (b) { b.addEventListener('click', function () { turn(Number(b.dataset.turn)); }); }); });
+document.addEventListener('keydown', function (e) {
+  var tg = e.target; if (tg && tg !== document.body && !(tg.classList && (tg.classList.contains('tb') || tg.classList.contains('turn-btn') || tg.classList.contains('tab')))) return;
+  if (e.key === 'ArrowRight') turn(1); else if (e.key === 'ArrowLeft') turn(-1);
+});
+if (mq.addEventListener) mq.addEventListener('change', build); else mq.addListener(build);
+
+/* ---------- pencil cursor ---------- */
+if (fine) {
+  var pen = $('#pencil'), shown = false;
+  cover.classList.add('pen');
+  document.addEventListener('pointermove', function (e) {
+    var over = e.target.closest && e.target.closest('#cover');
+    var typing = e.target.closest && e.target.closest('textarea, input, [contenteditable="true"]');
+    var want = !!over && !typing;
+    pen.style.transform = 'translate3d(' + (e.clientX - 6) + 'px,' + (e.clientY - 58) + 'px,0)';
+    if (want !== shown) { shown = want; pen.classList.toggle('show', want); }
+  });
+  document.addEventListener('pointerleave', function () { shown = false; pen.classList.remove('show'); });
+  document.addEventListener('pointerdown', function () { pen.classList.add('press'); });
+  document.addEventListener('pointerup', function () { pen.classList.remove('press'); });
+}
+
+/* ---------- start ---------- */
+state.plan = makeExample();
+buildChats();
+build();
+renderAll();
+setDefaultRemTime();
+initStore();
+setTimeout(checkReminders, 800);
+if ('speechSynthesis' in window) { try { window.speechSynthesis.getVoices(); } catch (e) {} }
+if (window.claude && window.claude.use) {
+  sampleReady = window.claude.use('sample').then(function (s) {
+    sampleFn = s;
+    if (!s) { setBrowserAiStatus(NO_AI_MSG); return; }
+    if (s.limits) return s.limits().then(function (l) { if (l && l.images) { imgLimits = l.images; solver.enableImages(); } }, function () {});
+  }, function () { sampleFn = null; setBrowserAiStatus(NO_AI_MSG); });
+} else {
+  setBrowserAiStatus(NO_AI_MSG);
+}
+
+/* ---------- standalone setup clarity ---------- */
+(function () {
+  var notice = $('#connectionNotice'), title = $('#connectionTitle'), detail = $('#connectionText');
+  if (!notice) return;
+  function warn(head, body) { title.textContent = head; detail.textContent = body; notice.hidden = false; }
+  $('#connectionDismiss').addEventListener('click', function () { notice.hidden = true; });
+  if (location.protocol === 'file:') {
+    warn('Open Study Buddy through a local server',
+      'Double-clicking the HTML file can block browser features. Start the preview with npm run preview, then open http://localhost:3000, or visit your hosted website.');
+    return;
+  }
+  if (!(window.claude && window.claude.standalone)) return; // Claude canvas handles its own connection.
+  fetch('/api/health', { cache: 'no-store' }).then(function (r) {
+    return r.json().then(function (d) { return { code: r.status, data: d }; });
+  }).then(function (info) {
+    if (info.code !== 200 || !info.data.db)
+      warn('Study Buddy database is unavailable', 'Your server could not reach PostgreSQL. The website owner should check DATABASE_URL and the hosting logs. Unsynced changes may exist only on this device.');
+    else if (!info.data.ai)
+      warn('Notebook storage is unavailable', 'Your changes may remain on this device only. Check the deployment settings if you expect cloud saving.');
+  }).catch(function () { warn('Cannot contact Study Buddy backend', 'This page did not receive a response from its server. Open the hosted URL or http://localhost:3000 instead of opening an HTML file directly.'); });
+})();
+
+/* ---------- signed-in student chip + logout ---------- */
+if (window.__SB) {
+  $('#who').textContent = window.__SB.guest ? 'Guest' : window.__SB.name; $('#who').hidden = false; $('#who').title = window.__SB.name;
+  var lo = $('#logout'); lo.hidden = false;
+  lo.addEventListener('click', function () {
+    if (window.__SB.guest && !window.confirm('Guest notebooks cannot be opened again after you log out. Log out anyway?')) return;
+    lo.disabled = true;
+    try { flushNow(); } catch (e) {}
+    fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', credentials: 'same-origin' })
+      .then(function () {}, function () {}).then(function () { try { localStorage.removeItem(LS_KEY); } catch (e) {} location.replace('/login'); });
+  });
+}
+
+/* ---------- global voice command button ---------- */
+(function () {
+  var b = $('#voiceCmd'), st = $('#vcStatus'); if (!b) return;
+  var dummy = document.createElement('textarea');
+  attachMic(b, dummy, function (m) { st.textContent = m || ''; }, function (text) {
+    st.textContent = 'Heard: ' + text;
+    if (!tryCommand(text)) speakBot('I can read your study tasks, tell you the next task, mark a task done, or open the Instant Planner.');
+  });
+})();
+})();
+
+</script>
+</body></html>

@@ -1,0 +1,23 @@
+# Secrets and local config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local dependencies, builds, platforms
+node_modules/
+.vercel/
+dist/
+coverage/
+
+# Editor, OS and Python caches
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+
+# Local archives or generated files
+*.zip

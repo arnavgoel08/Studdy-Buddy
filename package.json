@@ -1,0 +1,13 @@
+{
+  "name": "study-buddy-browser-ai",
+  "version": "0.4.1",
+  "private": true,
+  "license": "MIT",
+  "description": "Notebook-style Study Buddy with instant study planning, a voice task reader, optional browser tutoring and study-only guardrails",
+  "scripts": {
+    "preview": "node preview-server.cjs",
+    "check": "python scripts/validate.py",
+    "test": "node scripts/test-instant-planner.cjs && node scripts/test-browser-ai.cjs && node scripts/test-study-guard.cjs && npm run check && npm run check:docs",
+    "check:docs": "python scripts/check-doc-links.py"
+  }
+}
